@@ -3,6 +3,11 @@
 # Configures the newly installed Arch Linux system.
 # Run this script from inside the chroot as the root user.
 
+# --- NOTE ---
+# This script uses constants defined below. The `USERNAME` constant should
+# match the one you exported as an environment variable for the first script
+# to ensure files are placed in the correct home directory.
+
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
@@ -66,6 +71,7 @@ echo ">>> Installing core packages (GNOME, NVIDIA, Bluetooth, etc.)..."
 pacman -S --noconfirm --needed \
     gnome gdm pipewire pipewire-pulse pipewire-alsa pipewire-jack wireplumber \
     sudo base-devel git \
+    nvidia-lts nvidia-settings nvidia-utils \
     snapper snap-pac \
     bluez bluez-utils \
     noto-fonts ttf-dejavu ttf-liberation noto-fonts-emoji
