@@ -3,6 +3,15 @@
 # Prepares drives, subvolumes, and chroots into the new system.
 # Run from the live environment AFTER exporting variables.
 
+# --- INSTRUCTIONS ---
+# Before running this script, you MUST set the following environment variables
+# in your terminal. This tells the script which partitions to use.
+#
+# Example:
+# export EFI_PARTITION="/dev/nvme0n1p1"
+# export BTRFS_PARTITION="/dev/nvme0n1p4"
+# export USERNAME="january"
+
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
