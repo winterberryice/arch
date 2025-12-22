@@ -1,0 +1,29 @@
+# my-distro .gitignore
+
+# Temporary files
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing artifacts
+testing/arch-test.qcow2
+testing/*.iso
+testing/vm.pid
+testing/*.log
+
+# Local development
+.env
+.local
+
+# User data (should never be in repo)
+local-user-data/
+
+# Build artifacts
+*.tar.gz
+*.zip
+
+# IDE files
+.vscode/
+.idea/
+*.iml

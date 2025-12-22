@@ -1,0 +1,22 @@
+#!/bin/bash
+# my-distro-update-user
+# User configuration update script (no sudo required)
+#
+# This script:
+# 1. Reads current version from ~/.local/share/my-distro-state/version
+# 2. Reads latest version from /opt/my-distro/version
+# 3. If version=0: First run, copies all dotfiles
+# 4. If version < latest: Runs migrations sequentially
+# 5. Updates user's version file
+
+set -e  # Exit on error
+
+# TODO: Implement state directory initialization
+# TODO: Implement version reading
+# TODO: Implement first-run dotfile copy
+# TODO: Implement migration execution
+# TODO: Implement version update
+
+echo "my-distro-update-user: Not yet implemented"
+echo "This is a stub/template for future implementation"
+exit 1
