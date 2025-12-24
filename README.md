@@ -58,8 +58,25 @@ Users can override system defaults. Packages rarely touch /etc/xdg/ → minimal 
 
 ## Status
 
-**Current**: Planning phase with examples for reference
-**Next**: Implement one task at a time
+**Current**: Planning phase - Installation system design
+**Next**: GPU detection, LUKS workflow, script implementation
+
+## Installation Planning
+
+The installer supports flexible dual-boot scenarios with Windows, full LUKS encryption, and BTRFS with snapshots.
+
+**Key Features:**
+- ✅ Dual-boot with Windows (either install order)
+- ✅ Full LUKS encryption (except /boot)
+- ✅ BTRFS with subvolumes (@, @home, @snapshots, @var_log, @swap)
+- ✅ systemd-boot bootloader
+- ✅ TUI-based partitioning (gum)
+- ✅ AMD/NVIDIA GPU detection
+- ✅ zram + swapfile (hibernation in V2)
+
+**Documentation:**
+- [`docs/001-partitioning.md`](docs/001-partitioning.md) - Partitioning strategy and dual-boot setup
+- [`TODO.md`](TODO.md) - V1 roadmap and future features
 
 ## Reference Files
 
