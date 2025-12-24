@@ -1,10 +1,10 @@
 #!/bin/bash
-# my-distro-update-user
+# arch-update-user
 # User configuration update script (no sudo required)
 #
 # This script:
-# 1. Reads current version from ~/.local/share/my-distro-state/version
-# 2. Reads latest version from /opt/my-distro/version
+# 1. Reads current version from ~/.local/share/arch-state/version
+# 2. Reads latest version from /opt/arch/version
 # 3. If version=0: First run, copies all dotfiles
 # 4. If version < latest: Runs migrations sequentially
 # 5. Updates user's version file
@@ -17,6 +17,6 @@ set -e  # Exit on error
 # TODO: Implement migration execution
 # TODO: Implement version update
 
-echo "my-distro-update-user: Not yet implemented"
+echo "arch-update-user: Not yet implemented"
 echo "This is a stub/template for future implementation"
 exit 1
