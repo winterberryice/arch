@@ -76,6 +76,10 @@ The installer supports flexible dual-boot scenarios with Windows, full LUKS encr
 
 **Documentation:**
 - [`docs/001-partitioning.md`](docs/001-partitioning.md) - Partitioning strategy and dual-boot setup
+- [`docs/002-gpu-detection.md`](docs/002-gpu-detection.md) - GPU detection and driver installation
+- [`docs/003-luks-setup.md`](docs/003-luks-setup.md) - LUKS encryption workflow
+- [`docs/004-systemd-boot.md`](docs/004-systemd-boot.md) - systemd-boot bootloader configuration
+- [`docs/005-installation-flow.md`](docs/005-installation-flow.md) - Installation script architecture
 - [`TODO.md`](TODO.md) - V1 roadmap and future features
 
 ## Reference Files

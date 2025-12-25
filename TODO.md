@@ -2,7 +2,7 @@
 
 ## V1 - Core Installation System
 
-### Planning Phase (In Progress)
+### Planning Phase (Complete!)
 
 - [x] Partitioning strategy
   - [x] EFI handling (use existing or create new)
@@ -12,32 +12,32 @@
   - [x] TUI design (gum-based)
   - [x] Dual-boot scenarios (Windows first/Arch first)
 
-- [ ] GPU Detection & Driver Installation
-  - [ ] AMD vs NVIDIA detection logic
-  - [ ] Microcode selection (amd-ucode vs intel-ucode)
-  - [ ] Driver package selection
-  - [ ] Handle hybrid GPU scenarios (integrated + discrete)
+- [x] GPU Detection & Driver Installation
+  - [x] AMD vs NVIDIA detection logic
+  - [x] Microcode selection (amd-ucode vs intel-ucode)
+  - [x] Driver package selection
+  - [x] Handle hybrid GPU scenarios (integrated + discrete)
 
-- [ ] LUKS Setup Workflow
-  - [ ] Password handling (prompt, confirmation, strength check)
-  - [ ] cryptsetup configuration
-  - [ ] Key management strategy
-  - [ ] /etc/crypttab configuration
-  - [ ] initramfs hooks (encrypt, keyboard, keymap)
+- [x] LUKS Setup Workflow
+  - [x] Password handling (prompt, confirmation, strength check)
+  - [x] cryptsetup configuration
+  - [x] Key management strategy
+  - [x] /etc/crypttab configuration
+  - [x] initramfs hooks (encrypt, keyboard, keymap)
 
-- [ ] systemd-boot Configuration
-  - [ ] Boot entry creation
-  - [ ] Windows detection and chainloading
-  - [ ] Kernel parameter configuration (cryptdevice, root)
-  - [ ] Fallback entries
-  - [ ] Boot menu customization
+- [x] systemd-boot Configuration
+  - [x] Boot entry creation
+  - [x] Windows detection and chainloading
+  - [x] Kernel parameter configuration (cryptdevice, root)
+  - [x] Fallback entries
+  - [x] Boot menu customization
 
-- [ ] Installation Script Architecture
-  - [ ] Script structure and organization
-  - [ ] Error handling and recovery
-  - [ ] Logging strategy
-  - [ ] User interaction flow
-  - [ ] Idempotency considerations
+- [x] Installation Script Architecture
+  - [x] Script structure and organization
+  - [x] Error handling and recovery
+  - [x] Logging strategy
+  - [x] User interaction flow
+  - [x] Idempotency considerations
 
 ### Implementation Phase (Not Started)
 
@@ -101,13 +101,13 @@
   - [ ] Missing ESP
   - [ ] Boot configuration errors
 
-### Documentation (Partial)
+### Documentation (Complete!)
 
 - [x] docs/001-partitioning.md
-- [ ] docs/002-gpu-detection.md
-- [ ] docs/003-luks-setup.md
-- [ ] docs/004-systemd-boot.md
-- [ ] docs/005-installation-flow.md
+- [x] docs/002-gpu-detection.md
+- [x] docs/003-luks-setup.md
+- [x] docs/004-systemd-boot.md
+- [x] docs/005-installation-flow.md
 - [ ] Installation guide (user-facing)
 - [ ] Troubleshooting guide
 
