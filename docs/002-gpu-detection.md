@@ -41,11 +41,11 @@ This document describes the GPU detection strategy and driver installation logic
 **Proprietary Drivers (Required)**
 - NVIDIA requires proprietary drivers for good performance
 - Open source `nouveau` driver exists but limited (poor performance, no CUDA)
-- Must match kernel version (use `-lts` variants with `linux-lts`)
+- Must match kernel version (use `nvidia` for mainline kernel)
 
 **Packages:**
 - **Required:**
-  - `nvidia-lts` - Proprietary driver for linux-lts kernel
+  - `nvidia` - Proprietary driver for linux kernel
   - `nvidia-utils` - Userspace utilities and libraries
   - `nvidia-settings` - Configuration GUI
 - **Optional:**
@@ -106,6 +106,51 @@ MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)
 **Installation:** Always install on Intel CPUs (regardless of GPU)
 
 **Important:** CPU microcode ≠ GPU drivers. An Intel CPU can have an NVIDIA GPU!
+
+## Common Hardware Configurations
+
+### Desktop Systems (Single GPU)
+
+**AMD CPU + AMD GPU**
+- Example: Ryzen 5 7600X + RX 7800 XT
+- Install: `amd-ucode` + `mesa` + `vulkan-radeon`
+
+**AMD CPU + NVIDIA GPU** ← VERY COMMON!
+- Example: Ryzen 9 7950X + RTX 4090
+- Install: `amd-ucode` + `nvidia` + `nvidia-utils`
+- **This is NOT hybrid** - single GPU, different CPU/GPU vendors
+
+**Intel CPU + NVIDIA GPU**
+- Example: i9-13900K + RTX 4080
+- Install: `intel-ucode` + `nvidia` + `nvidia-utils`
+
+**Intel CPU + Intel iGPU**
+- Example: i5-13400 (integrated graphics only)
+- Install: `intel-ucode` + `mesa` + `vulkan-intel`
+
+### Laptop Systems (Hybrid GPU)
+
+**Intel iGPU + NVIDIA dGPU** ← MOST COMMON LAPTOP
+- Example: i7-12700H + RTX 3070 Mobile
+- Install: `intel-ucode` + `mesa` + `nvidia` + `nvidia-prime`
+- Use `prime-run` to switch to NVIDIA for gaming
+
+**AMD APU + AMD dGPU**
+- Example: Ryzen 7 6800H + RX 6700M
+- Install: `amd-ucode` + `mesa`
+- Use `DRI_PRIME=1` to switch to discrete GPU
+
+### Key Distinction
+
+**Single GPU System:**
+- CPU and GPU from different vendors is NORMAL
+- AMD CPU + NVIDIA GPU is very common (gaming/workstation builds)
+- Only install drivers for the ONE GPU present
+
+**Hybrid GPU System:**
+- TWO GPUs detected (integrated + discrete)
+- Usually laptops: Intel iGPU + NVIDIA dGPU
+- Install drivers for BOTH GPUs + switching mechanism
 
 ## Detection Strategy
 
@@ -215,35 +260,36 @@ GPU_COUNT=$(lspci | grep -i "VGA\|3D" | wc -l)
 
 ```
 # Detect GPUs
-HAS_AMD = detect_amd_gpu()
-HAS_NVIDIA = detect_nvidia_gpu()
-HAS_INTEL = detect_intel_gpu()
+HAS_AMD_GPU = detect_amd_gpu()
+HAS_NVIDIA_GPU = detect_nvidia_gpu()
+HAS_INTEL_GPU = detect_intel_gpu()
 
 # Detect CPU
 HAS_AMD_CPU = detect_amd_cpu()
 HAS_INTEL_CPU = detect_intel_cpu()
 
 # Base packages (always installed)
-PACKAGES = ["base", "linux-lts", "linux-firmware", "btrfs-progs", ...]
+PACKAGES = ["base", "linux", "linux-firmware", "btrfs-progs", ...]
 
-# Microcode (CPU-based)
+# Microcode (CPU-based, independent of GPU!)
 if HAS_AMD_CPU:
     PACKAGES.append("amd-ucode")
 elif HAS_INTEL_CPU:
     PACKAGES.append("intel-ucode")
 
-# GPU drivers
-if HAS_NVIDIA:
-    PACKAGES.extend(["nvidia-lts", "nvidia-utils", "nvidia-settings"])
+# GPU drivers (independent of CPU!)
+if HAS_NVIDIA_GPU:
+    PACKAGES.extend(["nvidia", "nvidia-utils", "nvidia-settings"])
     NEEDS_NVIDIA_PARAMS = true
-    if HAS_INTEL or HAS_AMD:
-        PACKAGES.append("nvidia-prime")  # Hybrid system
+    if HAS_INTEL_GPU or HAS_AMD_GPU:
+        # Hybrid GPU system (multiple GPUs)
+        PACKAGES.append("nvidia-prime")
 
-if HAS_AMD:
+if HAS_AMD_GPU:
     # AMD drivers usually included, but ensure mesa
     PACKAGES.extend(["mesa", "vulkan-radeon"])
 
-if HAS_INTEL:
+if HAS_INTEL_GPU:
     # Intel drivers usually included
     PACKAGES.extend(["mesa", "vulkan-intel", "intel-media-driver"])
 
@@ -320,7 +366,7 @@ HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont bl
 3. Build package list:
    - Base packages
    - Microcode (amd-ucode or intel-ucode)
-   - GPU drivers (nvidia-lts, mesa, vulkan packages)
+   - GPU drivers (nvidia, mesa, vulkan packages)
    - Hybrid support (nvidia-prime if needed)
 4. Run pacstrap with full package list
 ```
@@ -391,7 +437,7 @@ IF NVIDIA detected:
 ### Multiple NVIDIA GPUs (SLI/NVLink)
 
 **Same driver works for all NVIDIA GPUs**
-- Detect any NVIDIA GPU → install nvidia-lts
+- Detect any NVIDIA GPU → install nvidia
 - All NVIDIA GPUs in system use same driver
 
 ### Nouveau Blacklist
@@ -418,8 +464,13 @@ IF NVIDIA detected:
 - Verify: `glxinfo | grep "OpenGL renderer"` shows AMD
 
 **Scenario 2: NVIDIA GPU + Intel CPU**
-- Example: i7 + RTX 3070
-- Expected: intel-ucode, nvidia-lts
+- Example: Intel i7 + RTX 3070
+- Expected: intel-ucode, nvidia
+- Verify: `nvidia-smi` shows GPU info
+
+**Scenario 2b: NVIDIA GPU + AMD CPU** ← COMMON!
+- Example: AMD Ryzen 7 5800X + RTX 3080
+- Expected: amd-ucode, nvidia
 - Verify: `nvidia-smi` shows GPU info
 
 **Scenario 3: Intel iGPU only**
@@ -482,17 +533,17 @@ detect_cpu() {
 
 build_package_list() {
     # Base packages
-    PACKAGES=("base" "linux-lts" "linux-firmware" "btrfs-progs" ...)
+    PACKAGES=("base" "linux" "linux-firmware" "btrfs-progs" ...)
 
-    # Microcode
+    # Microcode (CPU-based)
     [[ -n "$MICROCODE" ]] && PACKAGES+=("$MICROCODE")
 
     # GPU drivers
     if [[ "$HAS_NVIDIA_GPU" == true ]]; then
-        PACKAGES+=("nvidia-lts" "nvidia-utils" "nvidia-settings")
+        PACKAGES+=("nvidia" "nvidia-utils" "nvidia-settings")
         NEEDS_NVIDIA_CONFIG=true
 
-        # Hybrid system
+        # Hybrid GPU system (multiple GPUs detected)
         if [[ "$GPU_COUNT" -gt 1 ]]; then
             PACKAGES+=("nvidia-prime")
             IS_HYBRID=true

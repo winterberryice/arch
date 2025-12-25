@@ -57,7 +57,7 @@ echo "✅ All partitions and subvolumes mounted."
 
 # --- 4. PACSTRAP (INSTALL BASE SYSTEM) ---
 echo ">>> Installing base system with pacstrap..."
-pacstrap -K /mnt base linux-lts linux-firmware vim amd-ucode grub efibootmgr networkmanager btrfs-progs
+pacstrap -K /mnt base linux linux-firmware vim amd-ucode grub efibootmgr networkmanager btrfs-progs
 
 # --- 5. GENERATE FSTAB ---
 echo ">>> Generating fstab..."

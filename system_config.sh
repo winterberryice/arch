@@ -71,7 +71,7 @@ echo ">>> Installing core packages (GNOME, NVIDIA, Bluetooth, etc.)..."
 pacman -S --noconfirm --needed \
     gnome gdm pipewire pipewire-pulse pipewire-alsa pipewire-jack wireplumber \
     sudo base-devel git \
-    nvidia-lts nvidia-settings nvidia-utils \
+    nvidia nvidia-settings nvidia-utils \
     snapper snap-pac \
     bluez bluez-utils \
     noto-fonts ttf-dejavu ttf-liberation noto-fonts-emoji
