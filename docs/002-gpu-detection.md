@@ -135,9 +135,16 @@ MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)
 - Install: `intel-ucode` + `mesa` + `nvidia` + `nvidia-prime`
 - Use `prime-run` to switch to NVIDIA for gaming
 
+**AMD APU + NVIDIA dGPU** ← LESS COMMON BUT EXISTS!
+- Example: Ryzen 7 5800H (Vega iGPU) + RTX 3070 Mobile
+- Install: `amd-ucode` + `mesa` + `nvidia` + `nvidia-prime`
+- AMD APU has integrated Radeon graphics + discrete NVIDIA
+- Use `prime-run` to switch to NVIDIA for gaming
+
 **AMD APU + AMD dGPU**
 - Example: Ryzen 7 6800H + RX 6700M
 - Install: `amd-ucode` + `mesa`
+- Both GPUs use same drivers (all AMD)
 - Use `DRI_PRIME=1` to switch to discrete GPU
 
 ### Key Distinction
@@ -480,13 +487,18 @@ IF NVIDIA detected:
 
 **Scenario 4: Hybrid Intel + NVIDIA**
 - Example: Laptop with i7 + RTX 3060
-- Expected: Both drivers, nvidia-prime
+- Expected: intel-ucode, mesa, nvidia, nvidia-prime
 - Verify: `prime-run glxinfo` uses NVIDIA
 
-**Scenario 5: AMD APU (integrated graphics)**
-- Example: Ryzen 5700G
+**Scenario 4b: Hybrid AMD + NVIDIA**
+- Example: Laptop with Ryzen 7 5800H + RTX 3070 Mobile
+- Expected: amd-ucode, mesa, nvidia, nvidia-prime
+- Verify: `prime-run glxinfo` uses NVIDIA
+
+**Scenario 5: AMD APU (integrated graphics only)**
+- Example: Ryzen 5700G (no discrete GPU)
 - Expected: amd-ucode, mesa
-- Verify: `DRI_PRIME=0 glxinfo` works
+- Verify: `glxinfo` works
 
 ## Detection Script Structure
 
