@@ -9,7 +9,7 @@ TEST_DIR="${SCRIPT_DIR}"
 DISK_IMAGE="${TEST_DIR}/test-disk.qcow2"
 DISK_SIZE="20G"
 ISO_PATH="${TEST_DIR}/archlinux-x86_64.iso"
-OVMF_PATH="/usr/share/ovmf/x64/OVMF_CODE.fd"
+OVMF_PATH="${OVMF_PATH:-}"  # Allow override via environment variable
 
 # Colors
 RED='\033[0;31m'
@@ -40,19 +40,53 @@ check_qemu() {
 
 # Check if OVMF firmware exists
 check_ovmf() {
-    # Try common OVMF paths
-    if [[ -f /usr/share/ovmf/x64/OVMF_CODE.fd ]]; then
-        OVMF_PATH="/usr/share/ovmf/x64/OVMF_CODE.fd"
-    elif [[ -f /usr/share/edk2-ovmf/x64/OVMF_CODE.fd ]]; then
-        OVMF_PATH="/usr/share/edk2-ovmf/x64/OVMF_CODE.fd"
-    elif [[ -f /usr/share/OVMF/OVMF_CODE.fd ]]; then
-        OVMF_PATH="/usr/share/OVMF/OVMF_CODE.fd"
-    else
-        error "OVMF firmware not found"
-        echo "Install with: sudo pacman -S edk2-ovmf"
-        exit 1
+    # Check if already set via environment variable
+    if [[ -n "$OVMF_PATH" ]] && [[ -f "$OVMF_PATH" ]]; then
+        info "Using OVMF firmware (from env): $OVMF_PATH"
+        return 0
     fi
-    info "Using OVMF firmware: $OVMF_PATH"
+
+    # Try common OVMF paths
+    local search_paths=(
+        "/usr/share/ovmf/x64/OVMF_CODE.fd"
+        "/usr/share/edk2-ovmf/x64/OVMF_CODE.fd"
+        "/usr/share/OVMF/OVMF_CODE.fd"
+        "/usr/share/qemu/ovmf-x86_64-code.bin"
+        "/usr/share/edk2/ovmf/OVMF_CODE.fd"
+    )
+
+    for path in "${search_paths[@]}"; do
+        if [[ -f "$path" ]]; then
+            OVMF_PATH="$path"
+            info "Using OVMF firmware: $OVMF_PATH"
+            return 0
+        fi
+    done
+
+    # Not found in common locations, try to find it
+    warn "OVMF firmware not found in common locations"
+    info "Searching for OVMF firmware..."
+
+    local found_files
+    found_files=$(find /usr/share -name "*OVMF*CODE*.fd" -o -name "ovmf-*-code.bin" 2>/dev/null | head -5)
+
+    if [[ -n "$found_files" ]]; then
+        echo ""
+        echo "Found potential OVMF firmware files:"
+        echo "$found_files"
+        echo ""
+        read -p "Enter full path to OVMF firmware (or press Enter to exit): " user_path
+        if [[ -f "$user_path" ]]; then
+            OVMF_PATH="$user_path"
+            info "Using OVMF firmware: $OVMF_PATH"
+            return 0
+        fi
+    fi
+
+    error "OVMF firmware not found"
+    echo "Install with: sudo pacman -S edk2-ovmf"
+    echo "Or set OVMF_PATH environment variable"
+    exit 1
 }
 
 # Create test disk
