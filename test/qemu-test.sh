@@ -143,7 +143,7 @@ launch_install() {
         -cpu host \
         -smp 2 \
         -m 4G \
-        -bios "$OVMF_PATH" \
+        -drive if=pflash,format=raw,readonly=on,file="$OVMF_PATH" \
         -drive file="$DISK_IMAGE",format=qcow2,if=virtio \
         -cdrom "$ISO_PATH" \
         -boot d \
@@ -171,7 +171,7 @@ launch_test() {
         -cpu host \
         -smp 2 \
         -m 4G \
-        -bios "$OVMF_PATH" \
+        -drive if=pflash,format=raw,readonly=on,file="$OVMF_PATH" \
         -drive file="$DISK_IMAGE",format=qcow2,if=virtio \
         -vga virtio \
         -display gtk,gl=on \
