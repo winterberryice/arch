@@ -301,8 +301,8 @@ if HAS_INTEL_GPU:
     PACKAGES.extend(["mesa", "vulkan-intel", "intel-media-driver"])
 
 # Desktop environment (if selected)
-if DESKTOP == "gnome":
-    PACKAGES.extend(["gnome", "gdm", ...])
+if DESKTOP == "cosmic":
+    PACKAGES.extend(["cosmic-epoch", ...])
 ```
 
 ## Kernel Parameters

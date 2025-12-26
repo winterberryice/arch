@@ -719,7 +719,7 @@ EOF
 1. System with NVIDIA GPU
 2. Verify boot entry has nvidia_drm.modeset=1
 3. Boot and check NVIDIA works
-4. Verify Wayland available (if GNOME)
+4. Verify Wayland available (if COSMIC)
 
 **Test 5: Wrong UUID**
 1. Edit boot entry, change UUID to invalid

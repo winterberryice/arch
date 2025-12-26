@@ -72,6 +72,7 @@ The installer supports flexible dual-boot scenarios with Windows, full LUKS encr
 - ✅ systemd-boot bootloader
 - ✅ TUI-based partitioning (gum)
 - ✅ AMD/NVIDIA GPU detection
+- ✅ COSMIC desktop environment
 - ✅ zram + swapfile (hibernation in V2)
 
 **Documentation:**

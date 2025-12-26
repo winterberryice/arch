@@ -67,9 +67,9 @@ passwd "${USERNAME}"
 echo "---"
 
 # --- 9. INSTALL DESKTOP, DRIVERS, AND UTILITIES ---
-echo ">>> Installing core packages (GNOME, NVIDIA, Bluetooth, etc.)..."
+echo ">>> Installing core packages (COSMIC, NVIDIA, Bluetooth, etc.)..."
 pacman -S --noconfirm --needed \
-    gnome gdm pipewire pipewire-pulse pipewire-alsa pipewire-jack wireplumber \
+    cosmic-epoch cosmic-greeter pipewire pipewire-pulse pipewire-alsa pipewire-jack wireplumber \
     sudo base-devel git \
     nvidia nvidia-settings nvidia-utils \
     snapper snap-pac \
@@ -78,7 +78,7 @@ pacman -S --noconfirm --needed \
 
 # --- 10. ENABLE SYSTEM SERVICES ---
 echo ">>> Enabling essential system services..."
-systemctl enable gdm.service
+systemctl enable cosmic-greeter.service
 systemctl enable NetworkManager.service
 systemctl enable bluetooth.service
 

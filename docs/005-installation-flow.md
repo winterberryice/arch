@@ -350,7 +350,7 @@ build_package_list() {
     [[ "$HAS_AMD_GPU" == true ]] && PACKAGES+=(mesa vulkan-radeon)
 
     # Desktop
-    PACKAGES+=(gnome gdm networkmanager)
+    PACKAGES+=(cosmic-epoch cosmic-greeter networkmanager)
 
     # Tools
     PACKAGES+=(vim sudo base-devel git)
@@ -614,7 +614,7 @@ sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard k
 mkinitcpio -P
 
 # Enable services
-systemctl enable gdm NetworkManager
+systemctl enable cosmic-greeter NetworkManager
 
 ui_success "System configured"
 ```
