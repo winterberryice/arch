@@ -58,34 +58,90 @@ Users can override system defaults. Packages rarely touch /etc/xdg/ → minimal 
 
 ## Status
 
-**Current**: Planning phase - Installation system design
-**Next**: GPU detection, LUKS workflow, script implementation
+**Current**: Phase 0 implementation complete - QEMU testable installer
+**Next**: Test in QEMU, then implement Phase 1 (LUKS, TUI, flexible partitioning)
 
-## Installation Planning
+## Phase 0 - MVP Installer (IMPLEMENTED)
 
-The installer supports flexible dual-boot scenarios with Windows, full LUKS encryption, and BTRFS with snapshots.
+Simple automated installer for QEMU testing.
 
-**Key Features:**
-- ✅ Dual-boot with Windows (either install order)
-- ✅ Full LUKS encryption (except /boot)
+**Implemented Features:**
 - ✅ BTRFS with subvolumes (@, @home, @snapshots, @var_log, @swap)
 - ✅ systemd-boot bootloader
-- ✅ TUI-based partitioning (gum)
 - ✅ AMD/NVIDIA GPU detection
 - ✅ COSMIC desktop environment
-- ✅ zram + swapfile (hibernation in V2)
+- ✅ zram + swapfile
+- ✅ Automated installation (no prompts)
+- ✅ Modular architecture (lib/, phases/)
 
-**Documentation:**
+**Deferred to Phase 1:**
+- ⏳ Dual-boot with Windows
+- ⏳ Full LUKS encryption (except /boot)
+- ⏳ TUI-based partitioning (gum)
+- ⏳ Flexible partitioning
+
+**Getting Started:**
+- [`install/README.md`](install/README.md) - Installation instructions
+- [`test/qemu-test.sh`](test/qemu-test.sh) - QEMU testing helper
+
+**Planning Documentation:**
 - [`docs/001-partitioning.md`](docs/001-partitioning.md) - Partitioning strategy and dual-boot setup
 - [`docs/002-gpu-detection.md`](docs/002-gpu-detection.md) - GPU detection and driver installation
 - [`docs/003-luks-setup.md`](docs/003-luks-setup.md) - LUKS encryption workflow
 - [`docs/004-systemd-boot.md`](docs/004-systemd-boot.md) - systemd-boot bootloader configuration
 - [`docs/005-installation-flow.md`](docs/005-installation-flow.md) - Installation script architecture
+- [`docs/006-implementation-strategy.md`](docs/006-implementation-strategy.md) - Implementation approach
 - [`TODO.md`](TODO.md) - V1 roadmap and future features
 
-## Reference Files
+## Quick Start
 
-- `bin/` - Update script templates (stubs with TODOs)
-- `system/` - Example system configs and package list
-- `user/` - Example dotfiles and migration template
-- `pre_install.sh`, `system_config.sh` - Original installation scripts
+### Installation (⚠️ QEMU Testing Only)
+
+```bash
+# From Arch Linux live environment
+git clone https://github.com/winterberryice/arch.git
+cd arch/install
+sudo ./install.sh
+```
+
+**⚠️ WARNING:** Phase 0 wipes the first detected disk and uses hardcoded passwords!
+See [install/README.md](install/README.md) for details.
+
+### QEMU Testing
+
+```bash
+# Install QEMU
+sudo pacman -S qemu-full edk2-ovmf
+
+# Download Arch ISO to test/ directory
+cd test
+wget https://mirror.rackspace.com/archlinux/iso/latest/archlinux-x86_64.iso
+
+# Run installer in QEMU
+./qemu-test.sh install
+```
+
+## Repository Structure
+
+```
+arch/
+├── install/              # Phase 0 installer (IMPLEMENTED)
+│   ├── install.sh       # Main orchestrator
+│   ├── lib/             # Common libraries
+│   │   ├── common.sh   # Error handling, logging
+│   │   ├── hardware.sh # GPU/CPU detection
+│   │   └── ui.sh       # Output functions
+│   └── phases/          # Installation phases
+│       ├── 01-prepare.sh
+│       ├── 02-partition.sh
+│       ├── 03-btrfs.sh
+│       ├── 04-install.sh
+│       ├── 05-configure.sh
+│       ├── 06-bootloader.sh
+│       └── 07-finalize.sh
+├── test/                # Testing utilities
+│   └── qemu-test.sh    # QEMU helper script
+├── docs/                # Planning documentation
+├── archive/             # Old scripts (reference)
+└── README.md           # This file
+```
