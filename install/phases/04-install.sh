@@ -37,9 +37,8 @@ fi
 
 # Desktop environment packages
 DESKTOP_PACKAGES=(
-    # COSMIC desktop (now in official repos!)
-    cosmic-session
-    cosmic-greeter
+    # COSMIC desktop - install full group (24 packages)
+    cosmic
     # Audio
     pipewire
     pipewire-pulse

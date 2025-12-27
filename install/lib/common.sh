@@ -10,7 +10,7 @@ LOG_FILE="/var/log/arch-install.log"
 VERBOSE=${VERBOSE:-true}  # Phase 0: verbose by default
 
 log() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
 info() {
@@ -112,9 +112,10 @@ run_phase() {
     local description=$2
 
     echo ""
-    info "========================================="
-    info "Phase: $description"
-    info "========================================="
+    echo "========================================="
+    echo "Phase: $description"
+    echo "========================================="
+    log "INFO: Phase: $description"
 
     if ! source "${SCRIPT_DIR}/phases/$phase.sh"; then
         error "Phase $phase failed"
@@ -129,9 +130,10 @@ run_phase_in_chroot() {
     local description=$2
 
     echo ""
-    info "========================================="
-    info "Phase (chroot): $description"
-    info "========================================="
+    echo "========================================="
+    echo "Phase (chroot): $description"
+    echo "========================================="
+    log "INFO: Phase (chroot): $description"
 
     # Create installer directory in chroot's /root
     mkdir -p /mnt/root/installer
