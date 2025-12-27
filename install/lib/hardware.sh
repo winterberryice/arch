@@ -91,7 +91,7 @@ build_gpu_package_list() {
 
         # AMD-specific
         if [[ "$HAS_AMD_GPU" == true ]]; then
-            GPU_PACKAGES+=(vulkan-radeon libva-mesa-driver mesa-vdpau)
+            GPU_PACKAGES+=(vulkan-radeon libva-mesa-driver)
             info "Added AMD Vulkan and video acceleration"
         fi
 
