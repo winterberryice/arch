@@ -44,8 +44,8 @@ chmod 0440 /etc/sudoers.d/wheel
 # Configure mkinitcpio
 info "Configuring mkinitcpio..."
 
-# Check if NVIDIA (need special modules)
-HAS_NVIDIA=$(cat /tmp/arch-install/has_nvidia 2>/dev/null || echo "false")
+# Check if NVIDIA (passed as env var from outside chroot)
+# HAS_NVIDIA is already set as an environment variable
 
 if [[ "$HAS_NVIDIA" == "true" ]]; then
     info "Adding NVIDIA modules to mkinitcpio..."

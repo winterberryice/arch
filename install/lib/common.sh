@@ -147,6 +147,11 @@ run_phase_in_chroot() {
     cp "${SCRIPT_DIR}/lib/common.sh" /mnt/root/installer/
     cp "${SCRIPT_DIR}/lib/ui.sh" /mnt/root/installer/
 
+    # Read hardware/partition state (saved outside chroot, need to pass in)
+    local BTRFS_PARTITION=$(load_state "btrfs_partition" || echo "")
+    local MICROCODE=$(load_state "microcode" || echo "")
+    local HAS_NVIDIA=$(load_state "has_nvidia" || echo "false")
+
     # Export configuration variables for chroot
     local config_exports="
         export TIMEZONE='$TIMEZONE'
@@ -157,6 +162,9 @@ run_phase_in_chroot() {
         export ROOT_PASSWORD='$ROOT_PASSWORD'
         export VERBOSE='$VERBOSE'
         export LOG_FILE='$LOG_FILE'
+        export BTRFS_PARTITION='$BTRFS_PARTITION'
+        export MICROCODE='$MICROCODE'
+        export HAS_NVIDIA='$HAS_NVIDIA'
     "
 
     # Execute in chroot

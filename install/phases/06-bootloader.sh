@@ -18,8 +18,12 @@ console-mode max
 editor   no
 EOF
 
-# Get partition UUID
-BTRFS_PARTITION=$(cat /tmp/arch-install/btrfs_partition)
+# Get partition UUID (BTRFS_PARTITION passed as env var from outside chroot)
+if [[ -z "$BTRFS_PARTITION" ]]; then
+    error "BTRFS_PARTITION not set - cannot configure bootloader"
+    exit 1
+fi
+
 PARTUUID=$(blkid -s PARTUUID -o value "$BTRFS_PARTITION")
 
 if [[ -z "$PARTUUID" ]]; then
@@ -29,14 +33,13 @@ else
     ROOT_PARAM="root=PARTUUID=${PARTUUID}"
 fi
 
-# Detect microcode
-MICROCODE=$(cat /tmp/arch-install/microcode 2>/dev/null || echo "")
+# Microcode and NVIDIA detection passed as env vars from outside chroot
+# MICROCODE and HAS_NVIDIA are already set as environment variables
 
 # Build kernel parameters
 KERNEL_PARAMS="${ROOT_PARAM} rootflags=subvol=@ rw"
 
 # Add NVIDIA parameters if needed
-HAS_NVIDIA=$(cat /tmp/arch-install/has_nvidia 2>/dev/null || echo "false")
 if [[ "$HAS_NVIDIA" == "true" ]]; then
     KERNEL_PARAMS="${KERNEL_PARAMS} nvidia_drm.modeset=1"
     info "Added NVIDIA kernel parameters"
