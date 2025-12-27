@@ -1,0 +1,25 @@
+# Arch Linux ISO
+test/archlinux-x86_64.iso
+test/*.iso
+
+# QEMU test disk images
+test/*.qcow2
+test/*.img
+
+# Installation state files
+/tmp/arch-install/
+/tmp/arch-install-*.json
+
+# Logs
+*.log
+/var/log/arch-install.log
+
+# Temporary files
+*.tmp
+*~
+.*.swp
+.*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
