@@ -7,7 +7,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEST_DIR="${SCRIPT_DIR}"
 DISK_IMAGE="${TEST_DIR}/test-disk.qcow2"
-DISK_SIZE="20G"
+DISK_SIZE="30G"
 ISO_PATH="${TEST_DIR}/archlinux-x86_64.iso"
 OVMF_PATH="${OVMF_PATH:-}"  # Allow override via environment variable
 
@@ -147,7 +147,7 @@ launch_install() {
     echo "-------------------------------------------------------------------"
     echo "git clone https://github.com/winterberryice/arch.git"
     echo "cd arch"
-    echo "git checkout claude/implement-omarchy-fork-R9IW6"
+    echo "git checkout claude/phase-1-implementation-9YKnp"
     echo "cd install"
     echo "sudo ./install.sh"
     echo "==================================================================="

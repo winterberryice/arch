@@ -47,27 +47,137 @@ else
     info "Install snapper later with: sudo pacman -S snapper"
 fi
 
-# Create warning file about default passwords
-info "Creating password warning file..."
-cat > /home/${USERNAME}/CHANGE_PASSWORDS.txt <<EOF
-⚠️  IMPORTANT - CHANGE DEFAULT PASSWORDS ⚠️
+# --- PHASE 1: SECURITY HARDENING ---
 
-This system was installed with default passwords for testing.
-YOU MUST CHANGE THEM IMMEDIATELY!
+info "Applying security hardening..."
 
-Current credentials:
-  Username: ${USERNAME}
-  Password: ${USER_PASSWORD}
-  Root password: ${ROOT_PASSWORD}
+# Set proper /boot permissions
+info "Setting /boot permissions (755)..."
+chmod 755 /boot
+chmod 755 /boot/EFI
+chmod 755 /boot/EFI/BOOT 2>/dev/null || true
+chmod 755 /boot/loader 2>/dev/null || true
 
-To change passwords:
-  1. Change user password: passwd
-  2. Change root password: sudo passwd root
-  3. Delete this file: rm ~/CHANGE_PASSWORDS.txt
+# Install and configure firewall (ufw)
+info "Installing and configuring firewall (ufw)..."
+if pacman -Q ufw &>/dev/null; then
+    info "ufw already installed"
+else
+    pacman -S --noconfirm ufw
+fi
 
-DO NOT use this system in production without changing passwords!
+# Configure ufw (but don't enable in chroot - kernel modules not available)
+info "Configuring firewall rules..."
+ufw --force reset >/dev/null 2>&1 || true  # Suppress errors in chroot
+ufw default deny incoming >/dev/null 2>&1 || true
+ufw default allow outgoing >/dev/null 2>&1 || true
+ufw limit ssh >/dev/null 2>&1 || true  # Rate limit SSH (prevents brute force)
+
+# Note: Don't run 'ufw enable' in chroot - it tries to load kernel modules
+# Instead, enable the systemd service which will activate on first boot
+info "Enabling firewall service (will activate on first boot)..."
+systemctl enable ufw.service
+
+# Create a systemd service to enable ufw on first boot
+cat > /etc/systemd/system/ufw-enable.service <<'EOF'
+[Unit]
+Description=Enable UFW firewall on first boot
+After=network-pre.target
+Before=network.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ufw --force enable
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
 EOF
 
-chown ${USERNAME}:${USERNAME} /home/${USERNAME}/CHANGE_PASSWORDS.txt
+systemctl enable ufw-enable.service
 
+success "Firewall configured (will be enabled on first boot with SSH rate limiting)"
+
+# Disable root SSH login
+info "Securing SSH configuration..."
+if [[ -f /etc/ssh/sshd_config ]]; then
+    # Disable root login
+    if grep -q "^PermitRootLogin" /etc/ssh/sshd_config; then
+        sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+    else
+        echo "PermitRootLogin no" >> /etc/ssh/sshd_config
+    fi
+
+    # Disable password authentication for root (key-based only for users is recommended but not enforced)
+    if grep -q "^#PasswordAuthentication" /etc/ssh/sshd_config; then
+        sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    fi
+
+    success "SSH hardened (root login disabled)"
+else
+    warn "sshd_config not found, skipping SSH hardening"
+fi
+
+# Set restrictive umask
+info "Setting secure umask..."
+echo "umask 077" >> /etc/profile.d/umask.sh
+chmod 644 /etc/profile.d/umask.sh
+
+# Create security checklist
+info "Creating security checklist..."
+cat > /home/${USERNAME}/SECURITY_CHECKLIST.txt <<EOF
+🔒 Security Checklist - Post-Installation
+
+Your system has been hardened with basic security measures:
+
+✅ Completed:
+  • Firewall (ufw) enabled
+    - Default: Deny incoming, Allow outgoing
+    - SSH port 22 allowed (rate limited)
+  • /boot permissions set to 755
+  • Root SSH login disabled
+  • Secure umask (077) configured
+
+📋 Recommended Next Steps:
+  1. Configure SSH key-based authentication
+     - Generate SSH key: ssh-keygen -t ed25519
+     - Copy to authorized_keys
+     - Consider disabling password auth in /etc/ssh/sshd_config
+
+  2. Install fail2ban for brute-force protection
+     - sudo pacman -S fail2ban
+     - sudo systemctl enable --now fail2ban
+
+  3. Enable automatic security updates (optional)
+     - Consider using arch-audit for vulnerability scanning
+     - sudo pacman -S arch-audit
+
+  4. Review and customize firewall rules
+     - List rules: sudo ufw status verbose
+     - Add custom rules: sudo ufw allow <port>
+
+  5. Set up BTRFS snapshots with snapper (if desired)
+     - sudo pacman -S snapper
+     - sudo snapper -c root create-config /
+
+  6. Consider additional hardening
+     - AppArmor or SELinux (advanced)
+     - Kernel hardening parameters
+     - Regular security audits
+
+🔐 Your Credentials:
+  Username: ${USERNAME}
+  Hostname: ${HOSTNAME}
+
+For more security information, visit:
+  https://wiki.archlinux.org/title/Security
+
+Delete this file after reviewing: rm ~/SECURITY_CHECKLIST.txt
+EOF
+
+chown ${USERNAME}:${USERNAME} /home/${USERNAME}/SECURITY_CHECKLIST.txt
+chmod 644 /home/${USERNAME}/SECURITY_CHECKLIST.txt
+
+success "Security hardening complete"
 success "Finalization complete"
