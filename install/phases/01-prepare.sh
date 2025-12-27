@@ -9,6 +9,15 @@ check_root
 check_uefi
 check_network
 
+# Optimize mirrors for faster downloads
+info "Optimizing package mirrors (this may take 30-60 seconds)..."
+if pacman -Sy --noconfirm reflector &>/dev/null; then
+    reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
+    success "Mirrors optimized for faster downloads"
+else
+    warn "reflector not available, using default mirrors"
+fi
+
 # Update system clock
 info "Updating system clock..."
 timedatectl set-ntp true
