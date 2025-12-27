@@ -127,17 +127,23 @@ download_iso() {
 
 # Launch QEMU for installation
 launch_install() {
-    info "Launching QEMU with SPICE (clipboard support)..."
+    info "Launching QEMU with SSH port forwarding..."
     echo ""
     echo "==================================================================="
-    echo "SPICE VIEWER REQUIRED:"
-    echo "  Install: sudo pacman -S virt-viewer"
-    echo "  Then run: remote-viewer spice://localhost:5930"
-    echo ""
-    echo "With SPICE you can copy/paste between host and VM!"
+    echo "SSH INTO QEMU (much easier than GUI!):"
     echo "==================================================================="
     echo ""
-    echo "INSTALLATION COMMANDS:"
+    echo "After QEMU boots, in the QEMU window run:"
+    echo "  passwd           # Set root password (e.g. 'root')"
+    echo "  systemctl start sshd"
+    echo ""
+    echo "Then from your host terminal, SSH in:"
+    echo "  ssh -p 2222 root@localhost"
+    echo ""
+    echo "Now you can copy/paste normally in your terminal!"
+    echo "==================================================================="
+    echo ""
+    echo "INSTALLATION COMMANDS (run via SSH):"
     echo "-------------------------------------------------------------------"
     echo "git clone https://github.com/winterberryice/arch.git"
     echo "cd arch"
@@ -146,7 +152,7 @@ launch_install() {
     echo "sudo ./install.sh"
     echo "==================================================================="
     echo ""
-    warn "Press ENTER to launch QEMU with SPICE..."
+    warn "Press ENTER to launch QEMU..."
     read
 
     qemu-system-x86_64 \
@@ -158,13 +164,10 @@ launch_install() {
         -drive file="$DISK_IMAGE",format=qcow2,if=virtio \
         -cdrom "$ISO_PATH" \
         -boot d \
-        -vga qxl \
-        -device virtio-serial-pci \
-        -device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
-        -chardev spicevmc,id=spicechannel0,name=vdagent \
-        -spice port=5930,disable-ticketing=on \
+        -vga virtio \
+        -display gtk \
         -device virtio-net-pci,netdev=net0 \
-        -netdev user,id=net0 \
+        -netdev user,id=net0,hostfwd=tcp::2222-:22 \
         -monitor stdio
 }
 
@@ -187,13 +190,10 @@ launch_test() {
         -m 4G \
         -drive if=pflash,format=raw,readonly=on,file="$OVMF_PATH" \
         -drive file="$DISK_IMAGE",format=qcow2,if=virtio \
-        -vga qxl \
-        -device virtio-serial-pci \
-        -device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
-        -chardev spicevmc,id=spicechannel0,name=vdagent \
-        -spice port=5930,disable-ticketing=on \
+        -vga virtio \
+        -display gtk \
         -device virtio-net-pci,netdev=net0 \
-        -netdev user,id=net0 \
+        -netdev user,id=net0,hostfwd=tcp::2222-:22 \
         -monitor stdio
 }
 
