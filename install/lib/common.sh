@@ -147,6 +147,16 @@ run_phase_in_chroot() {
     # Ensure /mnt/tmp exists
     mkdir -p /mnt/tmp
 
+    # Debug: Show what we're trying to copy
+    info "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
+    info "DEBUG: Copying phase scripts to /mnt/tmp/"
+
+    # Verify source files exist
+    if [[ ! -f "${SCRIPT_DIR}/phases/$phase.sh" ]]; then
+        error "Source file not found: ${SCRIPT_DIR}/phases/$phase.sh"
+        return 1
+    fi
+
     # Copy phase script into chroot
     cp "${SCRIPT_DIR}/phases/$phase.sh" /mnt/root/installer/
     cp "${SCRIPT_DIR}/lib/common.sh" /mnt/root/installer/
