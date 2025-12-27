@@ -230,16 +230,7 @@ load_state() {
     fi
 }
 
-# --- CONFIGURATION (Phase 0 hardcoded values) ---
-
-# System settings
-TIMEZONE="Europe/Warsaw"
-LOCALE="en_US.UTF-8"
-HOSTNAME="archlinux"
-
-# User settings (hardcoded for Phase 0)
-USERNAME="january"
-USER_PASSWORD="test123"  # TODO: Change on first login
-ROOT_PASSWORD="root123"  # TODO: Change or lock
-
-info "Configuration loaded (Phase 0 - hardcoded values)"
+# --- CONFIGURATION ---
+# Phase 1: Configuration is now set interactively via configure_installation() in ui.sh
+# Variables: TIMEZONE, LOCALE, HOSTNAME, USERNAME, USER_PASSWORD, ROOT_PASSWORD
+# These are set by the user during installation and exported by configure_installation()

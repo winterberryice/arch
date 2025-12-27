@@ -1,40 +1,30 @@
 #!/bin/bash
-# phases/02-partition.sh - Automated disk partitioning
+# phases/02-partition.sh - Interactive disk partitioning
 # Part of omarchy fork installer
-# Phase 0: Auto-detect first disk, full wipe
+# Phase 1: Interactive disk selection with safety checks
 
 ui_section "Disk Partitioning"
 
-# Auto-detect first disk
-info "Detecting disks..."
-
-# Try NVMe first, then SATA/virtio
-if [[ -b /dev/nvme0n1 ]]; then
-    DISK="/dev/nvme0n1"
-    PARTITION_SUFFIX="p"
-elif [[ -b /dev/sda ]]; then
-    DISK="/dev/sda"
-    PARTITION_SUFFIX=""
-elif [[ -b /dev/vda ]]; then
-    DISK="/dev/vda"
-    PARTITION_SUFFIX=""
-else
-    error "No suitable disk found (checked nvme0n1, sda, vda)"
-    exit 1
-fi
+# Interactive disk selection (from ui.sh)
+DISK=$(select_installation_disk)
 
 info "Selected disk: $DISK"
 
-# Show current disk info
-info "Current disk layout:"
-lsblk "$DISK" || true
+# Determine partition suffix based on disk type
+if [[ "$DISK" =~ nvme ]]; then
+    PARTITION_SUFFIX="p"
+else
+    PARTITION_SUFFIX=""
+fi
 
 # Define partition paths
 EFI_PARTITION="${DISK}${PARTITION_SUFFIX}1"
 BTRFS_PARTITION="${DISK}${PARTITION_SUFFIX}2"
 
-warn "⚠ This will WIPE ALL DATA on $DISK"
-sleep 3
+info "Partition paths:"
+echo "  EFI:   $EFI_PARTITION"
+echo "  BTRFS: $BTRFS_PARTITION"
+echo ""
 
 # Wipe existing partition table
 info "Wiping partition table..."

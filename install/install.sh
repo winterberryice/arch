@@ -20,6 +20,9 @@ main() {
     # Show welcome message
     show_welcome
 
+    # Phase 1: Interactive Configuration
+    configure_installation
+
     # Phase 1: Preparation
     run_phase "01-prepare" "Preparation and requirements check"
 

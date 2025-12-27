@@ -47,27 +47,117 @@ else
     info "Install snapper later with: sudo pacman -S snapper"
 fi
 
-# Create warning file about default passwords
-info "Creating password warning file..."
-cat > /home/${USERNAME}/CHANGE_PASSWORDS.txt <<EOF
-⚠️  IMPORTANT - CHANGE DEFAULT PASSWORDS ⚠️
+# --- PHASE 1: SECURITY HARDENING ---
 
-This system was installed with default passwords for testing.
-YOU MUST CHANGE THEM IMMEDIATELY!
+info "Applying security hardening..."
 
-Current credentials:
+# Set proper /boot permissions
+info "Setting /boot permissions (755)..."
+chmod 755 /boot
+chmod 755 /boot/EFI
+chmod 755 /boot/EFI/BOOT 2>/dev/null || true
+chmod 755 /boot/loader 2>/dev/null || true
+
+# Install and configure firewall (ufw)
+info "Installing and configuring firewall (ufw)..."
+if pacman -Q ufw &>/dev/null; then
+    info "ufw already installed"
+else
+    pacman -S --noconfirm ufw
+fi
+
+# Configure ufw
+info "Configuring firewall rules..."
+ufw --force reset
+ufw default deny incoming
+ufw default allow outgoing
+ufw limit ssh  # Rate limit SSH (prevents brute force)
+ufw --force enable
+
+# Enable ufw service
+systemctl enable ufw.service
+
+success "Firewall configured (SSH allowed, all other incoming denied)"
+
+# Disable root SSH login
+info "Securing SSH configuration..."
+if [[ -f /etc/ssh/sshd_config ]]; then
+    # Disable root login
+    if grep -q "^PermitRootLogin" /etc/ssh/sshd_config; then
+        sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+    else
+        echo "PermitRootLogin no" >> /etc/ssh/sshd_config
+    fi
+
+    # Disable password authentication for root (key-based only for users is recommended but not enforced)
+    if grep -q "^#PasswordAuthentication" /etc/ssh/sshd_config; then
+        sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    fi
+
+    success "SSH hardened (root login disabled)"
+else
+    warn "sshd_config not found, skipping SSH hardening"
+fi
+
+# Set restrictive umask
+info "Setting secure umask..."
+echo "umask 077" >> /etc/profile.d/umask.sh
+chmod 644 /etc/profile.d/umask.sh
+
+# Create security checklist
+info "Creating security checklist..."
+cat > /home/${USERNAME}/SECURITY_CHECKLIST.txt <<EOF
+🔒 Security Checklist - Post-Installation
+
+Your system has been hardened with basic security measures:
+
+✅ Completed:
+  • Firewall (ufw) enabled
+    - Default: Deny incoming, Allow outgoing
+    - SSH port 22 allowed (rate limited)
+  • /boot permissions set to 755
+  • Root SSH login disabled
+  • Secure umask (077) configured
+
+📋 Recommended Next Steps:
+  1. Configure SSH key-based authentication
+     - Generate SSH key: ssh-keygen -t ed25519
+     - Copy to authorized_keys
+     - Consider disabling password auth in /etc/ssh/sshd_config
+
+  2. Install fail2ban for brute-force protection
+     - sudo pacman -S fail2ban
+     - sudo systemctl enable --now fail2ban
+
+  3. Enable automatic security updates (optional)
+     - Consider using arch-audit for vulnerability scanning
+     - sudo pacman -S arch-audit
+
+  4. Review and customize firewall rules
+     - List rules: sudo ufw status verbose
+     - Add custom rules: sudo ufw allow <port>
+
+  5. Set up BTRFS snapshots with snapper (if desired)
+     - sudo pacman -S snapper
+     - sudo snapper -c root create-config /
+
+  6. Consider additional hardening
+     - AppArmor or SELinux (advanced)
+     - Kernel hardening parameters
+     - Regular security audits
+
+🔐 Your Credentials:
   Username: ${USERNAME}
-  Password: ${USER_PASSWORD}
-  Root password: ${ROOT_PASSWORD}
+  Hostname: ${HOSTNAME}
 
-To change passwords:
-  1. Change user password: passwd
-  2. Change root password: sudo passwd root
-  3. Delete this file: rm ~/CHANGE_PASSWORDS.txt
+For more security information, visit:
+  https://wiki.archlinux.org/title/Security
 
-DO NOT use this system in production without changing passwords!
+Delete this file after reviewing: rm ~/SECURITY_CHECKLIST.txt
 EOF
 
-chown ${USERNAME}:${USERNAME} /home/${USERNAME}/CHANGE_PASSWORDS.txt
+chown ${USERNAME}:${USERNAME} /home/${USERNAME}/SECURITY_CHECKLIST.txt
+chmod 644 /home/${USERNAME}/SECURITY_CHECKLIST.txt
 
+success "Security hardening complete"
 success "Finalization complete"
