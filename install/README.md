@@ -91,7 +91,18 @@ Root password: root123
    sudo pacman -Syu
    ```
 
-3. **Install additional software:**
+3. **Install COSMIC desktop (optional):**
+   ```bash
+   # Clone the repo if you haven't already
+   git clone https://github.com/winterberryice/arch.git
+   cd arch
+   bash install-cosmic.sh
+   ```
+
+   Note: COSMIC installation takes 10-30 minutes and needs 8GB+ RAM to build.
+   See: https://wiki.archlinux.org/title/COSMIC
+
+4. **Install additional software:**
    ```bash
    sudo pacman -S firefox chromium
    ```
