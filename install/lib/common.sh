@@ -144,6 +144,15 @@ run_phase_in_chroot() {
         return 1
     fi
 
+    # Create installer directory in chroot's /root
+    mkdir -p /mnt/root/installer
+
+    # Verify source files exist
+    if [[ ! -f "${SCRIPT_DIR}/phases/$phase.sh" ]]; then
+        error "Source file not found: ${SCRIPT_DIR}/phases/$phase.sh"
+        return 1
+    fi
+
     # Copy phase script into chroot
     cp "${SCRIPT_DIR}/phases/$phase.sh" /mnt/root/installer/
     cp "${SCRIPT_DIR}/lib/common.sh" /mnt/root/installer/
@@ -153,6 +162,21 @@ run_phase_in_chroot() {
     local BTRFS_PARTITION=$(load_state "btrfs_partition" || echo "")
     local MICROCODE=$(load_state "microcode" || echo "")
     local HAS_NVIDIA=$(load_state "has_nvidia" || echo "false")
+
+    # Export configuration variables for chroot
+    local config_exports="
+        export TIMEZONE='$TIMEZONE'
+        export LOCALE='$LOCALE'
+        export HOSTNAME='$HOSTNAME'
+        export USERNAME='$USERNAME'
+        export USER_PASSWORD='$USER_PASSWORD'
+        export ROOT_PASSWORD='$ROOT_PASSWORD'
+        export VERBOSE='$VERBOSE'
+        export LOG_FILE='$LOG_FILE'
+        export BTRFS_PARTITION='$BTRFS_PARTITION'
+        export MICROCODE='$MICROCODE'
+        export HAS_NVIDIA='$HAS_NVIDIA'
+    "
 
     # Export configuration variables for chroot
     local config_exports="

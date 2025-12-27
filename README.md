@@ -58,27 +58,51 @@ Users can override system defaults. Packages rarely touch /etc/xdg/ → minimal 
 
 ## Status
 
-**Current**: Phase 0 implementation complete - QEMU testable installer
-**Next**: Test in QEMU, then implement Phase 1 (LUKS, TUI, flexible partitioning)
+**Phase 0: COMPLETE ✅** - Automated installer tested and working in QEMU
+**Phase 1: PLANNING** - Interactive configuration and real hardware safety
 
-## Phase 0 - MVP Installer (IMPLEMENTED)
+See [`docs/PHASE-0-COMPLETE.md`](docs/PHASE-0-COMPLETE.md) for Phase 0 summary and results.
 
-Simple automated installer for QEMU testing.
+## Phase 0 - MVP Installer (✅ COMPLETE)
 
-**Implemented Features:**
+**Goal:** Bare Arch + COSMIC Desktop, testable in QEMU
+**Status:** Complete and tested (2025-12-27)
+
+**Achieved:**
 - ✅ BTRFS with subvolumes (@, @home, @snapshots, @var_log, @swap)
-- ✅ systemd-boot bootloader
-- ✅ AMD/NVIDIA GPU detection
-- ✅ COSMIC desktop environment
-- ✅ zram + swapfile
+- ✅ systemd-boot bootloader with PARTUUID
+- ✅ Hardware auto-detection (AMD/Intel CPU, AMD/NVIDIA/Intel GPU)
+- ✅ Full COSMIC desktop environment (24 packages)
+- ✅ PipeWire audio stack
 - ✅ Automated installation (no prompts)
 - ✅ Modular architecture (lib/, phases/)
+- ✅ Mirror optimization with retry logic
+- ✅ Boots successfully in QEMU
+- ✅ Clean, formatted output
 
-**Deferred to Phase 1:**
+**Known Limitations (by design):**
+- ⚠️ Hardcoded test credentials (username: january, password: test123)
+- ⚠️ Auto-wipes first detected disk (no selection)
+- ⚠️ No security hardening
+- ⚠️ QEMU testing only - not safe for real hardware yet
+
+## Phase 1 - Interactive & Safe (NEXT)
+
+Making the installer safe for real hardware.
+
+**Planned Features:**
+- 🔲 Interactive disk selection
+- 🔲 Interactive configuration (passwords, username, hostname, timezone)
+- 🔲 Safety prompts and confirmations
+- 🔲 Security hardening (permissions, firewall)
+- 🔲 User-friendly TUI (gum or dialog)
+- 🔲 Better error recovery
+
+**Deferred to Later Phases:**
+- ⏳ Full LUKS encryption
 - ⏳ Dual-boot with Windows
-- ⏳ Full LUKS encryption (except /boot)
-- ⏳ TUI-based partitioning (gum)
 - ⏳ Flexible partitioning
+- ⏳ Snapshot configuration
 
 **Getting Started:**
 - [`install/README.md`](install/README.md) - Installation instructions
