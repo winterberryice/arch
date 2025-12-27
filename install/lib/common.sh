@@ -144,6 +144,9 @@ run_phase_in_chroot() {
         return 1
     fi
 
+    # Ensure /mnt/tmp exists
+    mkdir -p /mnt/tmp
+
     # Copy phase script into chroot
     cp "${SCRIPT_DIR}/phases/$phase.sh" /mnt/root/installer/
     cp "${SCRIPT_DIR}/lib/common.sh" /mnt/root/installer/
@@ -167,6 +170,18 @@ run_phase_in_chroot() {
         export BTRFS_PARTITION='$BTRFS_PARTITION'
         export MICROCODE='$MICROCODE'
         export HAS_NVIDIA='$HAS_NVIDIA'
+    "
+
+    # Export configuration variables for chroot
+    local config_exports="
+        export TIMEZONE='$TIMEZONE'
+        export LOCALE='$LOCALE'
+        export HOSTNAME='$HOSTNAME'
+        export USERNAME='$USERNAME'
+        export USER_PASSWORD='$USER_PASSWORD'
+        export ROOT_PASSWORD='$ROOT_PASSWORD'
+        export VERBOSE='$VERBOSE'
+        export LOG_FILE='$LOG_FILE'
     "
 
     # Execute in chroot
