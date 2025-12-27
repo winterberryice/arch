@@ -16,13 +16,13 @@ log() {
 info() {
     log "INFO: $*"
     if [[ "$VERBOSE" == true ]]; then
-        echo -e "\033[0;34mℹ\033[0m $*"
+        echo -e "\033[0;34mℹ\033[0m $*" >&2
     fi
 }
 
 warn() {
     log "WARN: $*"
-    echo -e "\033[0;33m⚠\033[0m $*"
+    echo -e "\033[0;33m⚠\033[0m $*" >&2
 }
 
 error() {
@@ -32,7 +32,7 @@ error() {
 
 success() {
     log "SUCCESS: $*"
-    echo -e "\033[0;32m✅\033[0m $*"
+    echo -e "\033[0;32m✅\033[0m $*" >&2
 }
 
 # --- ERROR HANDLING ---
