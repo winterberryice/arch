@@ -162,6 +162,8 @@ run_phase_in_chroot() {
     local BTRFS_PARTITION=$(load_state "btrfs_partition" || echo "")
     local MICROCODE=$(load_state "microcode" || echo "")
     local HAS_NVIDIA=$(load_state "has_nvidia" || echo "false")
+    local ENABLE_ENCRYPTION=$(load_state "enable_encryption" || echo "false")
+    local LUKS_PARTITION=$(load_state "luks_partition" || echo "")
 
     # Export configuration variables for chroot
     local config_exports="
@@ -176,21 +178,8 @@ run_phase_in_chroot() {
         export BTRFS_PARTITION='$BTRFS_PARTITION'
         export MICROCODE='$MICROCODE'
         export HAS_NVIDIA='$HAS_NVIDIA'
-    "
-
-    # Export configuration variables for chroot
-    local config_exports="
-        export TIMEZONE='$TIMEZONE'
-        export LOCALE='$LOCALE'
-        export HOSTNAME='$HOSTNAME'
-        export USERNAME='$USERNAME'
-        export USER_PASSWORD='$USER_PASSWORD'
-        export ROOT_PASSWORD='$ROOT_PASSWORD'
-        export VERBOSE='$VERBOSE'
-        export LOG_FILE='$LOG_FILE'
-        export BTRFS_PARTITION='$BTRFS_PARTITION'
-        export MICROCODE='$MICROCODE'
-        export HAS_NVIDIA='$HAS_NVIDIA'
+        export ENABLE_ENCRYPTION='$ENABLE_ENCRYPTION'
+        export LUKS_PARTITION='$LUKS_PARTITION'
     "
 
     # Execute in chroot

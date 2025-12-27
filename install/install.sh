@@ -14,6 +14,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 source "${SCRIPT_DIR}/lib/ui.sh"
 source "${SCRIPT_DIR}/lib/hardware.sh"
+source "${SCRIPT_DIR}/lib/partition.sh"
+source "${SCRIPT_DIR}/lib/encryption.sh"
 
 # Main installation function
 main() {
