@@ -36,6 +36,9 @@ if [[ ${#GPU_PACKAGES[@]} -gt 0 ]]; then
 fi
 
 # Desktop environment packages
+# NOTE: COSMIC is not in official repos, needs AUR
+# For Phase 0, we'll install a minimal base system
+# You can install COSMIC manually after: https://github.com/pop-os/cosmic-epoch
 DESKTOP_PACKAGES=(
     # COSMIC desktop - install full group (24 packages)
     cosmic
@@ -45,6 +48,8 @@ DESKTOP_PACKAGES=(
     pipewire-alsa
     pipewire-jack
     wireplumber
+    # Basic tools
+    firefox
 )
 
 # Combine all packages
