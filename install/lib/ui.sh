@@ -281,35 +281,35 @@ show_disk_details() {
     local disk="$1"
     local disk_name=$(basename "$disk")
 
-    echo ""
-    ui_header "Disk Information: $disk"
+    echo "" >&2
+    ui_header "Disk Information: $disk" >&2
 
     # Show disk details
-    lsblk "$disk" -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL
-    echo ""
+    lsblk "$disk" -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL >&2
+    echo "" >&2
 
     # Check for mounted partitions
     local mounted_parts=$(lsblk -n -o MOUNTPOINT "$disk" | grep -v "^$" || true)
     if [[ -n "$mounted_parts" ]]; then
         warn "⚠️  WARNING: This disk has MOUNTED partitions!"
-        echo "Mounted at:"
-        echo "$mounted_parts"
-        echo ""
+        echo "Mounted at:" >&2
+        echo "$mounted_parts" >&2
+        echo "" >&2
     fi
 
     # Check for existing filesystems
     local filesystems=$(lsblk -n -o FSTYPE "$disk" | grep -v "^$" || true)
     if [[ -n "$filesystems" ]]; then
         warn "⚠️  WARNING: This disk contains existing filesystems!"
-        echo "Filesystem types detected:"
-        echo "$filesystems" | sort -u
-        echo ""
+        echo "Filesystem types detected:" >&2
+        echo "$filesystems" | sort -u >&2
+        echo "" >&2
     fi
 
     # Check for existing partition table
     if blkid "$disk" &>/dev/null || sfdisk -d "$disk" &>/dev/null 2>&1; then
         warn "⚠️  WARNING: This disk has an existing partition table!"
-        echo ""
+        echo "" >&2
     fi
 
     # Detect potential operating systems
@@ -333,12 +333,12 @@ show_disk_details() {
 
     if [[ "$has_windows" == true ]]; then
         warn "⚠️  DETECTED: Possible Windows installation on this disk!"
-        echo ""
+        echo "" >&2
     fi
 
     if [[ "$has_linux" == true ]]; then
         warn "⚠️  DETECTED: Possible Linux installation on this disk!"
-        echo ""
+        echo "" >&2
     fi
 }
 
@@ -346,27 +346,27 @@ show_disk_details() {
 confirm_disk_wipe() {
     local disk="$1"
 
-    echo ""
+    echo "" >&2
     error "═══════════════════════════════════════════════════════════════"
     error "⚠️   DESTRUCTIVE OPERATION - ALL DATA WILL BE LOST!   ⚠️"
     error "═══════════════════════════════════════════════════════════════"
-    echo ""
-    echo "This will completely ERASE the selected disk:"
-    echo "  Device: $disk"
+    echo "" >&2
+    echo "This will completely ERASE the selected disk:" >&2
+    echo "  Device: $disk" >&2
 
     # Get disk size and model
     local disk_info=$(lsblk -d -n -o SIZE,MODEL "$disk" 2>/dev/null || echo "Unknown")
-    echo "  Info: $disk_info"
-    echo ""
-    echo "ALL DATA on this disk will be PERMANENTLY DELETED!"
-    echo "This includes:"
-    echo "  • All files and folders"
-    echo "  • All partitions"
-    echo "  • All operating systems"
-    echo "  • Everything. No recovery possible."
-    echo ""
+    echo "  Info: $disk_info" >&2
+    echo "" >&2
+    echo "ALL DATA on this disk will be PERMANENTLY DELETED!" >&2
+    echo "This includes:" >&2
+    echo "  • All files and folders" >&2
+    echo "  • All partitions" >&2
+    echo "  • All operating systems" >&2
+    echo "  • Everything. No recovery possible." >&2
+    echo "" >&2
     error "═══════════════════════════════════════════════════════════════"
-    echo ""
+    echo "" >&2
 
     # Require typing "YES" in all caps
     local confirmation
@@ -381,7 +381,7 @@ confirm_disk_wipe() {
 
 # Interactive disk selection
 select_installation_disk() {
-    ui_header "Disk Selection"
+    ui_header "Disk Selection" >&2
 
     info "Scanning for available disks..."
 
@@ -402,6 +402,7 @@ select_installation_disk() {
         show_disk_details "$disk"
 
         if confirm_disk_wipe "$disk"; then
+            # Only the disk path goes to stdout
             echo "$disk"
             return 0
         else
@@ -411,12 +412,12 @@ select_installation_disk() {
     else
         # Multiple disks, let user choose
         info "Found $disk_count disks"
-        echo ""
+        echo "" >&2
 
         # Show brief list first
-        echo "Available disks:"
-        lsblk -d -o NAME,SIZE,TYPE,MODEL | grep -E "disk|NAME"
-        echo ""
+        echo "Available disks:" >&2
+        lsblk -d -o NAME,SIZE,TYPE,MODEL | grep -E "disk|NAME" >&2
+        echo "" >&2
 
         # Create menu options with size and model
         local disk_options=()
@@ -435,6 +436,7 @@ select_installation_disk() {
         show_disk_details "$selected_disk"
 
         if confirm_disk_wipe "$selected_disk"; then
+            # Only the disk path goes to stdout
             echo "$selected_disk"
             return 0
         else
