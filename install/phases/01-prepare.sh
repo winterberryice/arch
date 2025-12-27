@@ -12,8 +12,11 @@ check_network
 # Optimize mirrors for faster downloads
 info "Optimizing package mirrors (this may take 30-60 seconds)..."
 if pacman -Sy --noconfirm reflector &>/dev/null; then
-    reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
-    success "Mirrors optimized for faster downloads"
+    if reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist 2>&1 | tee -a "$LOG_FILE"; then
+        success "Mirrors optimized for faster downloads"
+    else
+        warn "Mirror optimization failed, using default mirrors"
+    fi
 else
     warn "reflector not available, using default mirrors"
 fi
