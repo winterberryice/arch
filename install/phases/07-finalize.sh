@@ -66,18 +66,38 @@ else
     pacman -S --noconfirm ufw
 fi
 
-# Configure ufw
+# Configure ufw (but don't enable in chroot - kernel modules not available)
 info "Configuring firewall rules..."
-ufw --force reset
-ufw default deny incoming
-ufw default allow outgoing
-ufw limit ssh  # Rate limit SSH (prevents brute force)
-ufw --force enable
+ufw --force reset >/dev/null 2>&1 || true  # Suppress errors in chroot
+ufw default deny incoming >/dev/null 2>&1 || true
+ufw default allow outgoing >/dev/null 2>&1 || true
+ufw limit ssh >/dev/null 2>&1 || true  # Rate limit SSH (prevents brute force)
 
-# Enable ufw service
+# Note: Don't run 'ufw enable' in chroot - it tries to load kernel modules
+# Instead, enable the systemd service which will activate on first boot
+info "Enabling firewall service (will activate on first boot)..."
 systemctl enable ufw.service
 
-success "Firewall configured (SSH allowed, all other incoming denied)"
+# Create a systemd service to enable ufw on first boot
+cat > /etc/systemd/system/ufw-enable.service <<'EOF'
+[Unit]
+Description=Enable UFW firewall on first boot
+After=network-pre.target
+Before=network.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ufw --force enable
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable ufw-enable.service
+
+success "Firewall configured (will be enabled on first boot with SSH rate limiting)"
 
 # Disable root SSH login
 info "Securing SSH configuration..."
