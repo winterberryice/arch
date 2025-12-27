@@ -188,6 +188,9 @@ run_phase_in_chroot() {
         export ROOT_PASSWORD='$ROOT_PASSWORD'
         export VERBOSE='$VERBOSE'
         export LOG_FILE='$LOG_FILE'
+        export BTRFS_PARTITION='$BTRFS_PARTITION'
+        export MICROCODE='$MICROCODE'
+        export HAS_NVIDIA='$HAS_NVIDIA'
     "
 
     # Execute in chroot
