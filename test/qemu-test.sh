@@ -152,7 +152,7 @@ launch_install() {
     echo "sudo ./install.sh"
     echo "==================================================================="
     echo ""
-    warn "Press ENTER to launch QEMU..."
+    warn "Press ENTER to launch QEMU with SPICE..."
     read
 
     qemu-system-x86_64 \
