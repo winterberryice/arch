@@ -64,10 +64,7 @@ info "Enabling system services..."
 systemctl enable NetworkManager.service
 systemctl enable cosmic-greeter.service
 
-# Enable PipeWire for user
-info "Enabling PipeWire audio for $USERNAME..."
-sudo -u "$USERNAME" systemctl --user enable pipewire.service
-sudo -u "$USERNAME" systemctl --user enable pipewire-pulse.service
-sudo -u "$USERNAME" systemctl --user enable wireplumber.service
+# Note: PipeWire user services will auto-start on first login via systemd user presets
+# No need to manually enable during installation (would fail in chroot anyway)
 
 success "System configuration complete"
