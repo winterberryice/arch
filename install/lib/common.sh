@@ -84,11 +84,24 @@ check_uefi() {
 
 check_network() {
     info "Checking network connectivity..."
-    if ! ping -c 1 -W 5 archlinux.org &>/dev/null; then
+
+    # Try multiple hosts to avoid false negatives
+    local hosts=("8.8.8.8" "1.1.1.1" "archlinux.org")
+    local connected=false
+
+    for host in "${hosts[@]}"; do
+        if ping -c 1 -W 3 "$host" &>/dev/null; then
+            connected=true
+            break
+        fi
+    done
+
+    if [[ "$connected" == false ]]; then
         error "No network connection. Please connect to network first."
         echo "Tip: Use 'iwctl' for WiFi or check ethernet connection"
         exit 1
     fi
+
     success "Network connectivity OK"
 }
 
