@@ -133,12 +133,8 @@ run_phase_in_chroot() {
     info "Phase (chroot): $description"
     info "========================================="
 
-    # Ensure /mnt/tmp exists
-    mkdir -p /mnt/tmp
-
-    # Debug: Show what we're trying to copy
-    info "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
-    info "DEBUG: Copying phase scripts to /mnt/tmp/"
+    # Create installer directory in chroot's /root
+    mkdir -p /mnt/root/installer
 
     # Verify source files exist
     if [[ ! -f "${SCRIPT_DIR}/phases/$phase.sh" ]]; then
@@ -147,13 +143,9 @@ run_phase_in_chroot() {
     fi
 
     # Copy phase script into chroot
-    cp -v "${SCRIPT_DIR}/phases/$phase.sh" /mnt/tmp/
-    cp -v "${SCRIPT_DIR}/lib/common.sh" /mnt/tmp/
-    cp -v "${SCRIPT_DIR}/lib/ui.sh" /mnt/tmp/
-
-    # Verify files were copied
-    info "DEBUG: Files in /mnt/tmp:"
-    ls -la /mnt/tmp/
+    cp "${SCRIPT_DIR}/phases/$phase.sh" /mnt/root/installer/
+    cp "${SCRIPT_DIR}/lib/common.sh" /mnt/root/installer/
+    cp "${SCRIPT_DIR}/lib/ui.sh" /mnt/root/installer/
 
     # Export configuration variables for chroot
     local config_exports="
@@ -170,16 +162,16 @@ run_phase_in_chroot() {
     # Execute in chroot
     if ! arch-chroot /mnt bash -c "
         $config_exports
-        source /tmp/common.sh
-        source /tmp/ui.sh
-        source /tmp/$phase.sh
+        source /root/installer/common.sh
+        source /root/installer/ui.sh
+        source /root/installer/$phase.sh
     "; then
         error "Phase $phase failed in chroot"
         return 1
     fi
 
     # Cleanup
-    rm -f /mnt/tmp/{$phase.sh,common.sh,ui.sh}
+    rm -rf /mnt/root/installer
 
     success "Completed: $description"
 }
