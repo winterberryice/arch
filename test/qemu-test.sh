@@ -127,13 +127,14 @@ download_iso() {
 
 # Launch QEMU for installation
 launch_install() {
-    info "Launching QEMU for installation..."
+    info "Launching QEMU with SPICE (clipboard support)..."
     echo ""
     echo "==================================================================="
-    echo "HOW TO PASTE IN QEMU:"
-    echo "  - Middle mouse button, OR"
-    echo "  - Shift+Insert, OR"
-    echo "  - Just type the commands below"
+    echo "SPICE VIEWER REQUIRED:"
+    echo "  Install: sudo pacman -S virt-viewer"
+    echo "  Then run: remote-viewer spice://localhost:5930"
+    echo ""
+    echo "With SPICE you can copy/paste between host and VM!"
     echo "==================================================================="
     echo ""
     echo "INSTALLATION COMMANDS:"
@@ -145,7 +146,7 @@ launch_install() {
     echo "sudo ./install.sh"
     echo "==================================================================="
     echo ""
-    warn "Press ENTER to launch QEMU..."
+    warn "Press ENTER to launch QEMU with SPICE..."
     read
 
     qemu-system-x86_64 \
@@ -157,8 +158,11 @@ launch_install() {
         -drive file="$DISK_IMAGE",format=qcow2,if=virtio \
         -cdrom "$ISO_PATH" \
         -boot d \
-        -vga virtio \
-        -display gtk,gl=on \
+        -vga qxl \
+        -device virtio-serial-pci \
+        -device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
+        -chardev spicevmc,id=spicechannel0,name=vdagent \
+        -spice port=5930,disable-ticketing=on \
         -device virtio-net-pci,netdev=net0 \
         -netdev user,id=net0 \
         -monitor stdio
@@ -183,8 +187,11 @@ launch_test() {
         -m 4G \
         -drive if=pflash,format=raw,readonly=on,file="$OVMF_PATH" \
         -drive file="$DISK_IMAGE",format=qcow2,if=virtio \
-        -vga virtio \
-        -display gtk,gl=on \
+        -vga qxl \
+        -device virtio-serial-pci \
+        -device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0 \
+        -chardev spicevmc,id=spicechannel0,name=vdagent \
+        -spice port=5930,disable-ticketing=on \
         -device virtio-net-pci,netdev=net0 \
         -netdev user,id=net0 \
         -monitor stdio
