@@ -303,14 +303,14 @@ launch_install() {
     qemu-system-x86_64 \
         -enable-kvm \
         -cpu host \
-        -smp 2 \
-        -m 4G \
+        -smp 4 \
+        -m 8G \
         -drive if=pflash,format=raw,readonly=on,file="$OVMF_PATH" \
         -drive file="$DISK_IMAGE",format=qcow2,if=virtio \
         -cdrom "$ISO_PATH" \
         -boot d \
-        -vga virtio \
-        -display gtk \
+        -device virtio-vga-gl \
+        -display gtk,gl=on \
         -device virtio-net-pci,netdev=net0 \
         -netdev user,id=net0,hostfwd=tcp::2222-:22 \
         -monitor stdio
@@ -331,12 +331,12 @@ launch_test() {
     qemu-system-x86_64 \
         -enable-kvm \
         -cpu host \
-        -smp 2 \
-        -m 4G \
+        -smp 4 \
+        -m 8G \
         -drive if=pflash,format=raw,readonly=on,file="$OVMF_PATH" \
         -drive file="$DISK_IMAGE",format=qcow2,if=virtio \
-        -vga virtio \
-        -display gtk \
+        -device virtio-vga-gl \
+        -display gtk,gl=on \
         -device virtio-net-pci,netdev=net0 \
         -netdev user,id=net0,hostfwd=tcp::2222-:22 \
         -monitor stdio
