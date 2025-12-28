@@ -43,14 +43,18 @@ ui_progress() {
 
 show_welcome() {
     ui_header "Arch Linux Installer (omarchy fork)"
-    echo "Phase 1 - Interactive Installation"
+    echo "Phase 2 - Advanced Installation"
     echo ""
     echo "Features:"
     echo "  • Interactive configuration"
+    echo "  • Flexible partitioning (whole disk, partition, or free space)"
+    echo "  • Optional LUKS encryption"
+    echo "  • Dual-boot support (Windows/Linux)"
     echo "  • BTRFS with subvolumes"
-    echo "  • systemd-boot"
-    echo "  • COSMIC desktop"
+    echo "  • systemd-boot bootloader"
+    echo "  • COSMIC desktop environment"
     echo "  • Hardware auto-detection"
+    echo "  • Security hardening"
     echo ""
     echo "This installer will guide you through setting up Arch Linux."
     echo ""
@@ -128,15 +132,15 @@ prompt_password() {
     local password_confirm
 
     while true; do
-        password=$(gum input --password --placeholder "Enter password (min 8 characters)" --prompt "$prompt_text: ")
+        password=$(gum input --password --placeholder "Enter password (min 6 characters)" --prompt "$prompt_text: ")
 
         if [[ -z "$password" ]]; then
             warn "Password cannot be empty"
             continue
         fi
 
-        if [[ ${#password} -lt 8 ]]; then
-            warn "Password must be at least 8 characters"
+        if [[ ${#password} -lt 6 ]]; then
+            warn "Password must be at least 6 characters"
             continue
         fi
 
@@ -199,11 +203,11 @@ prompt_timezone() {
     done
 }
 
-# Interactive configuration - collect all user input
+# Interactive configuration - collect all user input with review screen
 configure_installation() {
     ui_header "Installation Configuration"
 
-    echo "Let's configure your Arch Linux installation."
+    echo "Configure your Arch Linux installation."
     echo ""
 
     # Check for gum
@@ -214,58 +218,214 @@ configure_installation() {
 
     echo ""
 
-    # Collect configuration
-    info "User Account Setup"
-    USERNAME=$(prompt_username)
-    success "Username: $USERNAME"
-    echo ""
+    # Initialize configuration with defaults/empty values
+    USERNAME=""
+    USER_PASSWORD=""
+    ROOT_PASSWORD=""
+    HOSTNAME="archlinux"
+    TIMEZONE="Europe/Warsaw"
+    LOCALE="en_DK.UTF-8"
+    KEYBOARD="pl2"
+    ENABLE_ENCRYPTION=false
+    LUKS_PASSWORD=""
 
-    USER_PASSWORD=$(prompt_password "User password")
-    success "User password set"
-    echo ""
+    # Configuration menu loop
+    while true; do
+        clear
+        ui_header "Installation Configuration"
 
-    ROOT_PASSWORD=$(prompt_password "Root password")
-    success "Root password set"
-    echo ""
-
-    info "System Configuration"
-    HOSTNAME=$(prompt_hostname)
-    success "Hostname: $HOSTNAME"
-    echo ""
-
-    TIMEZONE=$(prompt_timezone)
-    success "Timezone: $TIMEZONE"
-    echo ""
-
-    # Set locale (default for Phase 1)
-    LOCALE="en_US.UTF-8"
-
-    # Show configuration summary
-    ui_header "Configuration Summary"
-    echo "Username:  $USERNAME"
-    echo "Hostname:  $HOSTNAME"
-    echo "Timezone:  $TIMEZONE"
-    echo "Locale:    $LOCALE"
-    echo ""
-
-    # Confirm
-    if gum confirm "Proceed with this configuration?"; then
-        success "Configuration confirmed!"
+        # Show current settings
+        echo "Current Configuration:"
+        echo ""
+        echo "  1. User Account"
+        if [[ -n "$USERNAME" ]]; then
+            echo "     └─ Username: $USERNAME"
+            echo "     └─ Password: ●●●●●●●● (set)"
+        else
+            echo "     └─ Not configured"
+        fi
         echo ""
 
-        # Export configuration variables
-        export TIMEZONE
-        export LOCALE
-        export HOSTNAME
-        export USERNAME
-        export USER_PASSWORD
-        export ROOT_PASSWORD
+        echo "  2. Root Password"
+        if [[ -n "$ROOT_PASSWORD" ]]; then
+            echo "     └─ Password: ●●●●●●●● (set)"
+        else
+            echo "     └─ Not configured"
+        fi
+        echo ""
 
-        return 0
-    else
-        warn "Configuration cancelled by user"
-        exit 0
-    fi
+        echo "  3. System Settings"
+        echo "     └─ Hostname: $HOSTNAME"
+        echo "     └─ Timezone: $TIMEZONE"
+        echo "     └─ Locale:   $LOCALE"
+        echo "     └─ Keyboard: $KEYBOARD"
+        echo ""
+
+        echo "  4. Encryption"
+        if [[ "$ENABLE_ENCRYPTION" == true ]]; then
+            echo "     └─ LUKS Encryption: Enabled"
+            echo "     └─ Password: ●●●●●●●● (set)"
+        else
+            echo "     └─ LUKS Encryption: Disabled"
+        fi
+        echo ""
+
+        # Check if all required fields are set
+        local all_configured=true
+        if [[ -z "$USERNAME" ]] || [[ -z "$USER_PASSWORD" ]] || [[ -z "$ROOT_PASSWORD" ]]; then
+            all_configured=false
+        fi
+
+        echo "────────────────────────────────────────────────────"
+        echo ""
+
+        # Build menu options
+        local menu_options=()
+        menu_options+=("Configure User Account")
+        menu_options+=("Configure Root Password")
+        menu_options+=("Configure System Settings")
+        menu_options+=("Configure Encryption")
+        menu_options+=("───────────────────────")
+
+        if [[ "$all_configured" == true ]]; then
+            menu_options+=("✓ Proceed with Installation")
+        else
+            menu_options+=("⚠ Complete Required Settings First")
+        fi
+        menu_options+=("Exit Installer")
+
+        # Show menu
+        choice=$(gum choose --header "Select an option:" "${menu_options[@]}")
+
+        case "$choice" in
+            "Configure User Account")
+                echo ""
+                info "User Account Setup"
+                USERNAME=$(prompt_username)
+                success "Username: $USERNAME"
+                echo ""
+                USER_PASSWORD=$(prompt_password "User password")
+                success "User password set"
+                echo ""
+                gum style --foreground 2 "✓ User account configured"
+                sleep 1
+                ;;
+
+            "Configure Root Password")
+                echo ""
+                info "Root Password Setup"
+                ROOT_PASSWORD=$(prompt_password "Root password")
+                success "Root password set"
+                echo ""
+                gum style --foreground 2 "✓ Root password configured"
+                sleep 1
+                ;;
+
+            "Configure System Settings")
+                echo ""
+                info "System Configuration"
+                HOSTNAME=$(prompt_hostname)
+                success "Hostname: $HOSTNAME"
+                echo ""
+                TIMEZONE=$(prompt_timezone)
+                success "Timezone: $TIMEZONE"
+                echo ""
+                LOCALE=$(gum input --placeholder "Locale (e.g., en_DK.UTF-8, en_US.UTF-8)" --value "$LOCALE" --prompt "Locale: ")
+                success "Locale: $LOCALE"
+                echo ""
+                KEYBOARD=$(gum input --placeholder "Keyboard layout (e.g., pl, us, de)" --value "$KEYBOARD" --prompt "Keyboard: ")
+                success "Keyboard: $KEYBOARD"
+                echo ""
+                gum style --foreground 2 "✓ System settings configured"
+                sleep 1
+                ;;
+
+            "Configure Encryption")
+                echo ""
+                info "Security Options"
+
+                if gum confirm "Enable full-disk encryption? (LUKS)
+
+  ✅ Protects all data at rest
+  ⚠️  Requires password on every boot
+  ⚠️  If you forget password, data is lost forever"; then
+
+                    ENABLE_ENCRYPTION=true
+
+                    # Prompt for LUKS password
+                    LUKS_PASSWORD=$(prompt_luks_password)
+
+                    if [[ -z "$LUKS_PASSWORD" ]]; then
+                        warn "Encryption setup cancelled"
+                        ENABLE_ENCRYPTION=false
+                    else
+                        success "Encryption will be enabled"
+                    fi
+                else
+                    info "Encryption will be disabled"
+                    ENABLE_ENCRYPTION=false
+                    LUKS_PASSWORD=""
+                fi
+
+                echo ""
+                gum style --foreground 2 "✓ Encryption configured"
+                sleep 1
+                ;;
+
+            "✓ Proceed with Installation")
+                # Final confirmation
+                clear
+                ui_header "Ready to Install"
+                echo ""
+                echo "Installation Configuration Summary:"
+                echo ""
+                echo "  User Account:  $USERNAME"
+                echo "  Hostname:      $HOSTNAME"
+                echo "  Timezone:      $TIMEZONE"
+                echo "  Locale:        $LOCALE"
+                echo "  Encryption:    $( [[ "$ENABLE_ENCRYPTION" == true ]] && echo "Enabled (LUKS)" || echo "Disabled" )"
+                echo ""
+                echo "────────────────────────────────────────────────────"
+                echo ""
+
+                if gum confirm "Proceed with installation using these settings?"; then
+                    success "Configuration confirmed!"
+                    echo ""
+
+                    # Export configuration variables
+                    export TIMEZONE
+                    export LOCALE
+                    export KEYBOARD
+                    export HOSTNAME
+                    export USERNAME
+                    export USER_PASSWORD
+                    export ROOT_PASSWORD
+                    export ENABLE_ENCRYPTION
+                    export LUKS_PASSWORD
+
+                    return 0
+                fi
+                ;;
+
+            "⚠ Complete Required Settings First")
+                warn "Please configure all required settings:"
+                if [[ -z "$USERNAME" ]] || [[ -z "$USER_PASSWORD" ]]; then
+                    echo "  • User Account (username and password)"
+                fi
+                if [[ -z "$ROOT_PASSWORD" ]]; then
+                    echo "  • Root Password"
+                fi
+                echo ""
+                echo "Press ENTER to continue..."
+                read
+                ;;
+
+            "Exit Installer")
+                warn "Installation cancelled by user"
+                exit 0
+                ;;
+        esac
+    done
 }
 
 # --- DISK SELECTION ---
@@ -379,7 +539,7 @@ confirm_disk_wipe() {
     fi
 }
 
-# Interactive disk selection
+# Interactive disk selection (Phase 2: just pick the disk, don't ask about wiping yet)
 select_installation_disk() {
     ui_header "Disk Selection" >&2
 
@@ -396,12 +556,16 @@ select_installation_disk() {
     local disk_count=$(echo "$disks" | wc -l)
 
     if [[ $disk_count -eq 1 ]]; then
-        # Only one disk, show it and confirm
+        # Only one disk, show basic info
         local disk="$disks"
         info "Found 1 disk: $disk"
-        show_disk_details "$disk"
+        echo "" >&2
 
-        if confirm_disk_wipe "$disk"; then
+        # Show disk overview (but not the scary wipe warnings)
+        lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINT "$disk" >&2
+        echo "" >&2
+
+        if gum confirm "Use this disk for installation?"; then
             # Only the disk path goes to stdout
             echo "$disk"
             return 0
@@ -414,7 +578,7 @@ select_installation_disk() {
         info "Found $disk_count disks"
         echo "" >&2
 
-        # Show brief list first
+        # Show brief list
         echo "Available disks:" >&2
         lsblk -d -o NAME,SIZE,TYPE,MODEL | grep -E "disk|NAME" >&2
         echo "" >&2
@@ -432,10 +596,14 @@ select_installation_disk() {
         # Extract disk path from selection
         local selected_disk=$(echo "$selected_option" | awk '{print $1}')
 
-        # Show details and confirm
-        show_disk_details "$selected_disk"
+        # Show disk overview
+        echo "" >&2
+        info "Selected: $selected_disk"
+        echo "" >&2
+        lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINT "$selected_disk" >&2
+        echo "" >&2
 
-        if confirm_disk_wipe "$selected_disk"; then
+        if gum confirm "Use this disk for installation?"; then
             # Only the disk path goes to stdout
             echo "$selected_disk"
             return 0
@@ -444,4 +612,179 @@ select_installation_disk() {
             exit 0
         fi
     fi
+}
+
+# --- PHASE 2: INSTALLATION TARGET SELECTION ---
+
+# Select installation target (whole disk, partition, or free space)
+select_installation_target() {
+    local disk="$1"
+
+    ui_header "Installation Target Selection" >&2
+
+    info "Analyzing disk: $disk"
+    echo "" >&2
+
+    # Show disk overview
+    lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINT "$disk" >&2
+    echo "" >&2
+
+    # Detect existing EFI partition
+    local existing_efi=$(detect_existing_efi "$disk")
+
+    # Detect Windows
+    local has_windows=false
+    if detect_windows "$disk"; then
+        has_windows=true
+        warn "⚠️  Windows installation detected on this disk!"
+        echo "" >&2
+    fi
+
+    # Build menu options
+    local options=()
+    local option_types=()
+
+    # Option 1: Whole disk (wipe everything)
+    local disk_info=$(get_disk_display_info "$disk")
+    options+=("Whole disk $disk ($disk_info) - ⚠️  WILL ERASE EVERYTHING")
+    option_types+=("whole_disk:$disk")
+
+    # Option 2: Free space blocks (>= 20GB)
+    local free_spaces=$(detect_free_space "$disk")
+    local free_count=1
+    if [[ -n "$free_spaces" ]]; then
+        while IFS=: read -r start_sector end_sector size_gb; do
+            [[ -z "$start_sector" ]] && continue
+            options+=("Free space #${free_count} (${size_gb}GB) - Available for installation")
+            option_types+=("free_space:${start_sector}:${end_sector}:${size_gb}")
+            ((free_count++))
+        done <<< "$free_spaces"
+    fi
+
+    # Option 3: Existing partitions (that can be wiped)
+    local partitions=$(get_disk_partitions "$disk")
+    if [[ -n "$partitions" ]]; then
+        while IFS= read -r partition; do
+            [[ -z "$partition" ]] && continue
+
+            # Get partition info
+            local part_info=$(get_partition_info "$partition")
+            IFS=: read -r size filesystem label mountpoint <<< "$part_info"
+
+            # Check if mounted
+            local mount_warning=""
+            if [[ -n "$mountpoint" ]]; then
+                mount_warning=" ⛔ MOUNTED - CANNOT USE"
+            else
+                mount_warning=" - ⚠️  WILL FORMAT"
+            fi
+
+            # Build option text
+            local option_text="$partition ($size"
+            [[ -n "$filesystem" ]] && option_text+=", $filesystem"
+            [[ -n "$label" ]] && option_text+=", \"$label\""
+            option_text+=")${mount_warning}"
+
+            options+=("$option_text")
+            option_types+=("partition:$partition:$mountpoint")
+        done <<< "$partitions"
+    fi
+
+    # Show available options count
+    info "Found installation targets:"
+    echo "  • 1 whole disk option" >&2
+    [[ $((free_count - 1)) -gt 0 ]] && echo "  • $((free_count - 1)) free space block(s)" >&2
+    local part_count=$(echo "$partitions" | grep -c "^/dev/" 2>/dev/null)
+    part_count=${part_count:-0}  # Default to 0 if empty
+    [[ $part_count -gt 0 ]] && echo "  • $part_count existing partition(s)" >&2
+    echo "" >&2
+
+    # Warnings
+    if [[ "$has_windows" == true ]]; then
+        warn "⚠️  If you select 'Whole disk', Windows will be erased!"
+        warn "⚠️  To dual-boot, choose a partition or free space instead."
+        echo "" >&2
+    fi
+
+    if [[ -n "$existing_efi" ]]; then
+        info "ℹ️  Existing EFI partition found: $existing_efi"
+        info "ℹ️  This will be reused (not wiped) for dual-boot compatibility."
+        echo "" >&2
+    fi
+
+    # Let user choose
+    local selected_option=$(gum choose --header "Choose installation target:" "${options[@]}")
+    local selected_index=-1
+
+    # Find selected index
+    for i in "${!options[@]}"; do
+        if [[ "${options[$i]}" == "$selected_option" ]]; then
+            selected_index=$i
+            break
+        fi
+    done
+
+    if [[ $selected_index -lt 0 ]]; then
+        error "Invalid selection"
+        exit 1
+    fi
+
+    # Get selected target type and data
+    local target_info="${option_types[$selected_index]}"
+    local target_type=$(echo "$target_info" | cut -d: -f1)
+
+    # Validate selection
+    if [[ "$target_type" == "partition" ]]; then
+        local partition=$(echo "$target_info" | cut -d: -f2)
+        local mountpoint=$(echo "$target_info" | cut -d: -f3)
+
+        # Block mounted partitions
+        if [[ -n "$mountpoint" ]]; then
+            error "Cannot install to mounted partition: $partition (mounted at $mountpoint)"
+            error "Please unmount it first or choose a different target."
+            exit 1
+        fi
+
+        # Verify partition is safe to use
+        if ! verify_partition_safe "$partition"; then
+            error "Partition $partition is in use and cannot be formatted."
+            exit 1
+        fi
+    fi
+
+    # Confirm selection
+    echo "" >&2
+    info "Selected target: $selected_option"
+    echo "" >&2
+
+    # Show confirmation based on type
+    if [[ "$target_type" == "whole_disk" ]]; then
+        if ! confirm_disk_wipe "$disk"; then
+            warn "Installation cancelled by user"
+            exit 0
+        fi
+    else
+        # Confirm partition or free space installation
+        local confirm_msg=""
+        if [[ "$target_type" == "free_space" ]]; then
+            local size_gb=$(echo "$target_info" | cut -d: -f4)
+            confirm_msg="Install to free space (${size_gb}GB)?"
+        else
+            local partition=$(echo "$target_info" | cut -d: -f2)
+            confirm_msg="Format and install to $partition? All data on this partition will be lost!"
+        fi
+
+        echo "" >&2
+        warn "⚠️  WARNING: This operation cannot be undone!"
+        echo "" >&2
+
+        if ! gum confirm "$confirm_msg"; then
+            warn "Installation cancelled by user"
+            exit 0
+        fi
+    fi
+
+    # Return target info to stdout (format: type:data)
+    echo "$target_info"
+    return 0
 }

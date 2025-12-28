@@ -59,9 +59,11 @@ Users can override system defaults. Packages rarely touch /etc/xdg/ → minimal 
 ## Status
 
 **Phase 0: COMPLETE ✅** - Automated installer tested and working in QEMU
-**Phase 1: PLANNING** - Interactive configuration and real hardware safety
+**Phase 1: COMPLETE ✅** - Interactive configuration and real hardware safety
+**Phase 2: COMPLETE ✅** - Partition-level installation and LUKS encryption
 
 See [`docs/PHASE-0-COMPLETE.md`](docs/PHASE-0-COMPLETE.md) for Phase 0 summary and results.
+See [`PHASE-2-COMPLETE.md`](PHASE-2-COMPLETE.md) for Phase 2 implementation details.
 
 ## Phase 0 - MVP Installer (✅ COMPLETE)
 
@@ -86,22 +88,51 @@ See [`docs/PHASE-0-COMPLETE.md`](docs/PHASE-0-COMPLETE.md) for Phase 0 summary a
 - ⚠️ No security hardening
 - ⚠️ QEMU testing only - not safe for real hardware yet
 
-## Phase 1 - Interactive & Safe (NEXT)
+## Phase 1 - Interactive & Safe (✅ COMPLETE)
 
-Making the installer safe for real hardware.
+**Goal:** Make the installer safe for real hardware with interactive configuration
+**Status:** Complete and tested (2025-12-28)
 
-**Planned Features:**
-- 🔲 Interactive disk selection
-- 🔲 Interactive configuration (passwords, username, hostname, timezone)
-- 🔲 Safety prompts and confirmations
-- 🔲 Security hardening (permissions, firewall)
-- 🔲 User-friendly TUI (gum or dialog)
-- 🔲 Better error recovery
+**Achieved:**
+- ✅ Interactive disk selection with gum
+- ✅ Interactive configuration (passwords, username, hostname, timezone)
+- ✅ Safety prompts and confirmations
+- ✅ Security hardening (permissions, firewall, SSH hardening)
+- ✅ User-friendly TUI (gum framework)
+- ✅ Review screen with navigation
+- ✅ Error recovery and validation
 
-**Deferred to Later Phases:**
-- ⏳ Full LUKS encryption
-- ⏳ Dual-boot with Windows
-- ⏳ Flexible partitioning
+## Phase 2 - Advanced Partitioning & Encryption (✅ COMPLETE)
+
+**Goal:** Partition-level installation with LUKS encryption and dual-boot support
+**Status:** Complete and tested in QEMU (2025-12-28)
+
+**Achieved:**
+- ✅ **Partition-Level Installation** - 3 modes:
+  - Whole disk (wipe everything)
+  - Free space (dual-boot friendly)
+  - Existing partition (replace Linux)
+- ✅ **LUKS Encryption** (opt-in):
+  - LUKS2 with aes-xts-plain64, 512-bit key
+  - Password validation (min 12 chars recommended)
+  - Boot-time unlock with password prompt
+  - Initramfs encrypt hook + cryptdevice= bootloader config
+- ✅ **Dual-Boot Support**:
+  - Automatic EFI partition detection and reuse
+  - Windows detection with warnings
+  - Safe partition selection (prevents mounted partition formatting)
+- ✅ **Review Screen**: Menu-based configuration with navigation
+- ✅ **Testing**: QEMU validation with LUKS encryption successful
+
+**Known Limitations:**
+- /boot random seed warning (unavoidable on EFI/FAT32 systems)
+- Locale/keyboard selection deferred to Phase 3
+
+**Deferred to Phase 3:**
+- ⏳ Locale selection (currently defaults to en_US.UTF-8)
+- ⏳ Keyboard layout selection (currently defaults to US)
+- ⏳ Custom partition sizes
+- ⏳ LUKS header backup automation
 - ⏳ Snapshot configuration
 
 **Getting Started:**
@@ -119,7 +150,7 @@ Making the installer safe for real hardware.
 
 ## Quick Start
 
-### Installation (⚠️ QEMU Testing Only)
+### Installation
 
 ```bash
 # From Arch Linux live environment
@@ -128,8 +159,15 @@ cd arch/install
 sudo ./install.sh
 ```
 
-**⚠️ WARNING:** Phase 0 wipes the first detected disk and uses hardcoded passwords!
-See [install/README.md](install/README.md) for details.
+**Features:**
+- Interactive disk selection
+- Configurable user account, hostname, timezone
+- Optional LUKS encryption
+- 3 installation modes: Whole disk, Free space, or Existing partition
+- Dual-boot support (Windows/Linux detection)
+- Review screen before installation
+
+See [install/README.md](install/README.md) for detailed instructions.
 
 ### QEMU Testing
 

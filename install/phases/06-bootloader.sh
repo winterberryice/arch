@@ -24,20 +24,53 @@ if [[ -z "$BTRFS_PARTITION" ]]; then
     exit 1
 fi
 
-PARTUUID=$(blkid -s PARTUUID -o value "$BTRFS_PARTITION")
+# Handle LUKS encryption
+CRYPTDEVICE_PARAM=""
+ROOT_PARAM=""
 
-if [[ -z "$PARTUUID" ]]; then
-    warn "Could not get PARTUUID, using device path"
-    ROOT_PARAM="root=${BTRFS_PARTITION}"
+if [[ "$ENABLE_ENCRYPTION" == "true" ]]; then
+    info "Configuring bootloader for LUKS encryption..."
+
+    # Get LUKS partition UUID (the raw encrypted partition)
+    if [[ -z "$LUKS_PARTITION" ]]; then
+        error "LUKS_PARTITION not set - cannot configure encrypted bootloader"
+        exit 1
+    fi
+
+    LUKS_UUID=$(blkid -s UUID -o value "$LUKS_PARTITION")
+
+    if [[ -z "$LUKS_UUID" ]]; then
+        warn "Could not get LUKS UUID, using device path"
+        CRYPTDEVICE_PARAM="cryptdevice=${LUKS_PARTITION}:cryptroot"
+    else
+        CRYPTDEVICE_PARAM="cryptdevice=UUID=${LUKS_UUID}:cryptroot"
+    fi
+
+    # Root is the unlocked mapper device
+    ROOT_PARAM="root=/dev/mapper/cryptroot"
+
+    info "LUKS cryptdevice: $CRYPTDEVICE_PARAM"
 else
-    ROOT_PARAM="root=PARTUUID=${PARTUUID}"
+    # No encryption - use PARTUUID if available
+    PARTUUID=$(blkid -s PARTUUID -o value "$BTRFS_PARTITION")
+
+    if [[ -z "$PARTUUID" ]]; then
+        warn "Could not get PARTUUID, using device path"
+        ROOT_PARAM="root=${BTRFS_PARTITION}"
+    else
+        ROOT_PARAM="root=PARTUUID=${PARTUUID}"
+    fi
 fi
 
 # Microcode and NVIDIA detection passed as env vars from outside chroot
 # MICROCODE and HAS_NVIDIA are already set as environment variables
 
 # Build kernel parameters
-KERNEL_PARAMS="${ROOT_PARAM} rootflags=subvol=@ rw"
+if [[ -n "$CRYPTDEVICE_PARAM" ]]; then
+    KERNEL_PARAMS="${CRYPTDEVICE_PARAM} ${ROOT_PARAM} rootflags=subvol=@ rw"
+else
+    KERNEL_PARAMS="${ROOT_PARAM} rootflags=subvol=@ rw"
+fi
 
 # Add NVIDIA parameters if needed
 if [[ "$HAS_NVIDIA" == "true" ]]; then

@@ -16,6 +16,10 @@ sed -i "s/^#${LOCALE}/${LOCALE}/" /etc/locale.gen
 locale-gen
 echo "LANG=${LOCALE}" > /etc/locale.conf
 
+# Keyboard
+info "Configuring keyboard layout ($KEYBOARD)..."
+echo "KEYMAP=${KEYBOARD}" > /etc/vconsole.conf
+
 # Hostname
 info "Setting hostname to $HOSTNAME..."
 echo "$HOSTNAME" > /etc/hostname
@@ -52,8 +56,16 @@ if [[ "$HAS_NVIDIA" == "true" ]]; then
     sed -i 's/^MODULES=.*/MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)/' /etc/mkinitcpio.conf
 fi
 
-# Update hooks (no encrypt for Phase 0)
-sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)/' /etc/mkinitcpio.conf
+# Update hooks (add encrypt hook if encryption is enabled)
+if [[ "$ENABLE_ENCRYPTION" == "true" ]]; then
+    info "Adding encrypt hook for LUKS..."
+    # Hooks order: base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck
+    # keyboard/keymap MUST come before encrypt (to type password)
+    # encrypt MUST come before filesystems (to unlock before mount)
+    sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck)/' /etc/mkinitcpio.conf
+else
+    sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)/' /etc/mkinitcpio.conf
+fi
 
 # Rebuild initramfs
 info "Building initramfs..."
