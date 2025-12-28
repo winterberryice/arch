@@ -75,8 +75,6 @@ create_luks_container() {
     fi
 
     info "Creating LUKS2 encrypted container on $partition..."
-    info "DEBUG: Password length for create: ${#password} characters"
-    info "DEBUG: Password hash (for comparison): $(echo -n "$password" | sha256sum | cut -d' ' -f1)"
 
     # Verify partition exists
     if [[ ! -b "$partition" ]]; then
@@ -85,7 +83,6 @@ create_luks_container() {
     fi
 
     # Create LUKS container with defaults (LUKS2, aes-xts-plain64, 512-bit key)
-    info "DEBUG: Running cryptsetup luksFormat..."
     if ! echo -n "$password" | cryptsetup luksFormat --type luks2 "$partition" -; then
         error "Failed to create LUKS container"
         return 1
@@ -107,14 +104,10 @@ open_luks_container() {
     fi
 
     info "Opening LUKS container: $partition → /dev/mapper/$mapper_name..."
-    info "DEBUG: Password length for open: ${#password} characters"
-    info "DEBUG: Password hash (for comparison): $(echo -n "$password" | sha256sum | cut -d' ' -f1)"
 
     # Open LUKS container
-    info "DEBUG: Running cryptsetup open..."
     if ! echo -n "$password" | cryptsetup open "$partition" "$mapper_name"; then
         error "Failed to open LUKS container"
-        error "DEBUG: Cryptsetup open failed with exit code $?"
         return 1
     fi
 
