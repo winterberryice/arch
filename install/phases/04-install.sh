@@ -76,6 +76,8 @@ genfstab -U /mnt >> /mnt/etc/fstab
 # Add umask=0077 to EFI partition for security (eliminates systemd-boot random seed warning)
 info "Securing EFI partition permissions..."
 sed -i '/\/boot.*vfat/ s/rw/rw,umask=0077/' /mnt/etc/fstab
+sed -i '/\/boot.*vfat/ s/fmask=0022/fmask=0077/' /mnt/etc/fstab
+sed -i '/\/boot.*vfat/ s/dmask=0022/dmask=0077/' /mnt/etc/fstab
 
 # Verify fstab
 info "Generated fstab:"
