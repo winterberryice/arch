@@ -225,7 +225,7 @@ configure_installation() {
     HOSTNAME="archlinux"
     TIMEZONE="Europe/Warsaw"
     LOCALE="en_DK.UTF-8"
-    KEYBOARD="pl"
+    KEYBOARD="pl2"
     ENABLE_ENCRYPTION=false
     LUKS_PASSWORD=""
 
