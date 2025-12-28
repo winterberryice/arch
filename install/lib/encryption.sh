@@ -20,10 +20,10 @@ prompt_luks_password() {
         if [[ ${#password} -lt 12 ]]; then
             warn "Password is short (${#password} characters)"
             warn "Minimum 12 characters recommended for LUKS encryption"
-            echo ""
-            echo "⚠️  Remember: You will type this password on EVERY boot!"
-            echo "⚠️  If you forget it, your data is LOST FOREVER!"
-            echo ""
+            echo "" >&2
+            echo "⚠️  Remember: You will type this password on EVERY boot!" >&2
+            echo "⚠️  If you forget it, your data is LOST FOREVER!" >&2
+            echo "" >&2
 
             if ! gum confirm "Continue with this password?"; then
                 continue
