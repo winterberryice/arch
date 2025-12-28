@@ -132,15 +132,15 @@ prompt_password() {
     local password_confirm
 
     while true; do
-        password=$(gum input --password --placeholder "Enter password (min 8 characters)" --prompt "$prompt_text: ")
+        password=$(gum input --password --placeholder "Enter password (min 6 characters)" --prompt "$prompt_text: ")
 
         if [[ -z "$password" ]]; then
             warn "Password cannot be empty"
             continue
         fi
 
-        if [[ ${#password} -lt 8 ]]; then
-            warn "Password must be at least 8 characters"
+        if [[ ${#password} -lt 6 ]]; then
+            warn "Password must be at least 6 characters"
             continue
         fi
 
