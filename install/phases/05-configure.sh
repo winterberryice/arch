@@ -16,6 +16,10 @@ sed -i "s/^#${LOCALE}/${LOCALE}/" /etc/locale.gen
 locale-gen
 echo "LANG=${LOCALE}" > /etc/locale.conf
 
+# Keyboard
+info "Configuring keyboard layout ($KEYBOARD)..."
+echo "KEYMAP=${KEYBOARD}" > /etc/vconsole.conf
+
 # Hostname
 info "Setting hostname to $HOSTNAME..."
 echo "$HOSTNAME" > /etc/hostname

@@ -224,7 +224,8 @@ configure_installation() {
     ROOT_PASSWORD=""
     HOSTNAME="archlinux"
     TIMEZONE="Europe/Warsaw"
-    LOCALE="en_US.UTF-8"
+    LOCALE="en_DK.UTF-8"
+    KEYBOARD="pl"
     ENABLE_ENCRYPTION=false
     LUKS_PASSWORD=""
 
@@ -257,6 +258,7 @@ configure_installation() {
         echo "     └─ Hostname: $HOSTNAME"
         echo "     └─ Timezone: $TIMEZONE"
         echo "     └─ Locale:   $LOCALE"
+        echo "     └─ Keyboard: $KEYBOARD"
         echo ""
 
         echo "  4. Encryption"
@@ -328,6 +330,12 @@ configure_installation() {
                 TIMEZONE=$(prompt_timezone)
                 success "Timezone: $TIMEZONE"
                 echo ""
+                LOCALE=$(gum input --placeholder "Locale (e.g., en_DK.UTF-8, en_US.UTF-8)" --value "$LOCALE" --prompt "Locale: ")
+                success "Locale: $LOCALE"
+                echo ""
+                KEYBOARD=$(gum input --placeholder "Keyboard layout (e.g., pl, us, de)" --value "$KEYBOARD" --prompt "Keyboard: ")
+                success "Keyboard: $KEYBOARD"
+                echo ""
                 gum style --foreground 2 "✓ System settings configured"
                 sleep 1
                 ;;
@@ -387,6 +395,7 @@ configure_installation() {
                     # Export configuration variables
                     export TIMEZONE
                     export LOCALE
+                    export KEYBOARD
                     export HOSTNAME
                     export USERNAME
                     export USER_PASSWORD

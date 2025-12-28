@@ -49,9 +49,9 @@ if [[ "$TARGET_TYPE" == "whole_disk" ]]; then
     info "Creating GPT partition table..."
     sgdisk -o "$DISK"
 
-    # Create EFI partition (512MB)
-    info "Creating EFI partition (512MB)..."
-    sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"EFI System Partition" "$DISK"
+    # Create EFI partition (2GB)
+    info "Creating EFI partition (2GB)..."
+    sgdisk -n 1:0:+2G -t 1:ef00 -c 1:"EFI System Partition" "$DISK"
 
     # Create BTRFS partition (remaining space)
     info "Creating BTRFS partition (remaining space)..."
@@ -94,9 +94,9 @@ elif [[ "$TARGET_TYPE" == "free_space" ]]; then
         local efi_part_num=$(get_next_partition_number "$DISK")
         local btrfs_part_num=$((efi_part_num + 1))
 
-        # Create EFI partition (512MB at start of free space)
-        info "Creating EFI partition (512MB)..."
-        sgdisk -n "${efi_part_num}:${start_sector}:+512M" -t "${efi_part_num}:ef00" -c "${efi_part_num}:EFI System Partition" "$DISK"
+        # Create EFI partition (2GB at start of free space)
+        info "Creating EFI partition (2GB)..."
+        sgdisk -n "${efi_part_num}:${start_sector}:+2G" -t "${efi_part_num}:ef00" -c "${efi_part_num}:EFI System Partition" "$DISK"
 
         # Update start sector for BTRFS partition
         local efi_end_sector=$(sgdisk -i "$efi_part_num" "$DISK" 2>/dev/null | grep "Last sector:" | awk '{print $3}')
@@ -185,8 +185,8 @@ elif [[ "$TARGET_TYPE" == "partition" ]]; then
             local efi_start=$(echo "$first_free" | cut -d: -f1)
             local efi_part_num=$(get_next_partition_number "$DISK")
 
-            info "Creating EFI partition (512MB)..."
-            sgdisk -n "${efi_part_num}:${efi_start}:+512M" -t "${efi_part_num}:ef00" -c "${efi_part_num}:EFI System Partition" "$DISK"
+            info "Creating EFI partition (2GB)..."
+            sgdisk -n "${efi_part_num}:${efi_start}:+2G" -t "${efi_part_num}:ef00" -c "${efi_part_num}:EFI System Partition" "$DISK"
 
             # Inform kernel of partition changes
             partprobe "$DISK"
