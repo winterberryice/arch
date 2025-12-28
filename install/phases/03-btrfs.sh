@@ -52,7 +52,7 @@ mount -o noatime,subvol=@swap "$BTRFS_PARTITION" /mnt/swap  # No compression for
 
 # Mount EFI partition
 info "Mounting EFI partition..."
-mount "$EFI_PARTITION" /mnt/boot
+mount -o umask=0077,fmask=0077,dmask=0077 "$EFI_PARTITION" /mnt/boot
 
 # Verify mounts
 info "Verifying mounts..."
