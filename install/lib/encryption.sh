@@ -106,7 +106,7 @@ open_luks_container() {
     info "Opening LUKS container: $partition → /dev/mapper/$mapper_name..."
 
     # Open LUKS container
-    if ! echo -n "$password" | cryptsetup open "$partition" "$mapper_name" - 2>&1; then
+    if ! echo -n "$password" | cryptsetup open "$partition" "$mapper_name" 2>&1; then
         error "Failed to open LUKS container"
         return 1
     fi

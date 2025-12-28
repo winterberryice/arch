@@ -685,7 +685,8 @@ select_installation_target() {
     info "Found installation targets:"
     echo "  • 1 whole disk option" >&2
     [[ $((free_count - 1)) -gt 0 ]] && echo "  • $((free_count - 1)) free space block(s)" >&2
-    local part_count=$(echo "$partitions" | grep -c "^/dev/" || echo "0")
+    local part_count=$(echo "$partitions" | grep -c "^/dev/" 2>/dev/null)
+    part_count=${part_count:-0}  # Default to 0 if empty
     [[ $part_count -gt 0 ]] && echo "  • $part_count existing partition(s)" >&2
     echo "" >&2
 
