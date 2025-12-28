@@ -34,17 +34,125 @@ fi
 
 # Note: Don't activate swap in chroot, will activate on first boot
 
-# Create initial BTRFS snapshots (optional, requires snapper)
-if command -v snapper &>/dev/null; then
-    info "Setting up snapper..."
-    snapper -c root create-config /
-    snapper -c home create-config /home
-    snapper -c root create -d "Fresh install - Phase 0"
-    snapper -c home create -d "Fresh install - Phase 0"
-    info "Created initial snapshots"
+# --- PHASE 3: SNAPSHOT CONFIGURATION ---
+
+info "Configuring snapper for automatic snapshots..."
+
+# Verify snapper is installed
+if ! command -v snapper &>/dev/null; then
+    error "snapper not installed - this should not happen"
+    exit 1
+fi
+
+# Get device for mounting (handle both encrypted and non-encrypted)
+BTRFS_DEV=$(findmnt -n -o SOURCE /)
+info "BTRFS device: $BTRFS_DEV"
+
+# Step 1: Unmount /.snapshots (currently mounted as @snapshots subvolume)
+info "Unmounting /.snapshots..."
+umount /.snapshots || warn "/.snapshots not mounted or already unmounted"
+
+# Step 2: Create snapper config for root (this creates /.snapshots as a subvolume)
+info "Creating snapper config for root filesystem..."
+snapper -c root create-config /
+
+# Step 3: Delete the default .snapshots subvolume created by snapper
+info "Removing default snapper subvolume..."
+btrfs subvolume delete /.snapshots
+
+# Step 4: Recreate /.snapshots as a directory
+info "Recreating /.snapshots directory..."
+mkdir -p /.snapshots
+
+# Step 5: Remount our @snapshots subvolume at /.snapshots
+info "Remounting @snapshots subvolume..."
+mount -o noatime,compress=zstd:1,space_cache=v2,subvol=@snapshots "$BTRFS_DEV" /.snapshots
+
+# Verify mount
+if ! mountpoint -q /.snapshots; then
+    error "Failed to mount /.snapshots"
+    exit 1
+fi
+
+# Step 6: Configure snapshot retention policies
+info "Configuring snapshot retention policies..."
+cat > /etc/snapper/configs/root <<'EOF'
+# subvolume to snapshot
+SUBVOLUME="/"
+
+# filesystem type
+FSTYPE="btrfs"
+
+# btrfs qgroup for space aware cleanup algorithms
+QGROUP=""
+
+# fraction or absolute size of the filesystems space the snapshots may use
+SPACE_LIMIT="0.5"
+
+# fraction or absolute size of the filesystems space that should be free
+FREE_LIMIT="0.2"
+
+# users and groups allowed to work with config
+ALLOW_USERS=""
+ALLOW_GROUPS=""
+
+# sync users and groups from ALLOW_USERS and ALLOW_GROUPS to .snapshots
+# directory
+SYNC_ACL="no"
+
+# start comparing pre- and post-snapshot in background after creating
+# post-snapshot
+BACKGROUND_COMPARISON="yes"
+
+# run daily number cleanup
+NUMBER_CLEANUP="yes"
+
+# limit for number cleanup
+NUMBER_MIN_AGE="1800"
+NUMBER_LIMIT="10"
+NUMBER_LIMIT_IMPORTANT="10"
+
+# create hourly snapshots
+TIMELINE_CREATE="yes"
+
+# cleanup hourly snapshots after some time
+TIMELINE_CLEANUP="yes"
+
+# limits for timeline cleanup
+TIMELINE_MIN_AGE="1800"
+TIMELINE_LIMIT_HOURLY="5"
+TIMELINE_LIMIT_DAILY="7"
+TIMELINE_LIMIT_WEEKLY="4"
+TIMELINE_LIMIT_MONTHLY="3"
+TIMELINE_LIMIT_YEARLY="0"
+
+# cleanup empty pre-post-pairs
+EMPTY_PRE_POST_CLEANUP="yes"
+
+# limits for empty pre-post-pair cleanup
+EMPTY_PRE_POST_MIN_AGE="1800"
+EOF
+
+success "Snapper configuration complete"
+
+# Step 7: Enable automatic snapshot timers
+info "Enabling snapper timers..."
+systemctl enable snapper-timeline.timer    # Creates hourly snapshots
+systemctl enable snapper-cleanup.timer     # Cleans up old snapshots
+
+success "Snapper timers enabled"
+
+# Step 8: Create initial snapshot
+info "Creating initial snapshot..."
+snapper -c root create -d "Fresh install - Phase 3"
+
+# Verify snapshot was created
+SNAPSHOT_COUNT=$(snapper -c root list | wc -l)
+if [[ $SNAPSHOT_COUNT -gt 1 ]]; then
+    success "Initial snapshot created successfully"
+    snapper -c root list
 else
-    warn "snapper not installed, skipping snapshot creation"
-    info "Install snapper later with: sudo pacman -S snapper"
+    warn "Snapshot creation may have failed"
 fi
 
 # --- PHASE 1: SECURITY HARDENING ---
@@ -157,9 +265,10 @@ Your system has been hardened with basic security measures:
      - List rules: sudo ufw status verbose
      - Add custom rules: sudo ufw allow <port>
 
-  5. Set up BTRFS snapshots with snapper (if desired)
-     - sudo pacman -S snapper
-     - sudo snapper -c root create-config /
+  5. Review snapshot configuration
+     - List snapshots: sudo snapper list
+     - Create manual snapshot: sudo snapper create --description "Before major change"
+     - Snapshots created automatically (hourly) and before pacman updates
 
   6. Consider additional hardening
      - AppArmor or SELinux (advanced)
@@ -178,6 +287,179 @@ EOF
 
 chown ${USERNAME}:${USERNAME} /home/${USERNAME}/SECURITY_CHECKLIST.txt
 chmod 644 /home/${USERNAME}/SECURITY_CHECKLIST.txt
+
+# --- PHASE 3: SNAPSHOT POST-INSTALL MESSAGE ---
+
+info "Creating snapshot guide..."
+cat > /home/${USERNAME}/SNAPSHOTS_GUIDE.txt <<EOF
+📸 BTRFS Snapshots with Snapper - User Guide
+
+Your system is now configured with automatic BTRFS snapshots!
+
+================================================================================
+✅ What's Configured
+================================================================================
+
+1. Automatic Timeline Snapshots (Hourly)
+   - Snapper creates automatic snapshots every hour
+   - Retention: 5 hourly, 7 daily, 4 weekly, 3 monthly
+   - Old snapshots cleaned up automatically
+
+2. Automatic Pre/Post Snapshots (Before Updates)
+   - snap-pac creates snapshots before and after every pacman operation
+   - Allows you to rollback if an update breaks your system
+   - No configuration needed - works automatically
+
+3. Snapshot Storage
+   - Snapshots stored in /.snapshots (BTRFS @snapshots subvolume)
+   - Uses BTRFS copy-on-write (minimal space usage)
+   - Space limit: 50% of filesystem
+
+================================================================================
+📋 Common Commands
+================================================================================
+
+List all snapshots:
+  sudo snapper list
+
+Create a manual snapshot:
+  sudo snapper create --description "Before major change"
+
+Compare snapshot to current system:
+  sudo snapper status 1..0
+
+Show files changed since snapshot:
+  sudo snapper diff 1..0
+
+Delete a snapshot:
+  sudo snapper delete <snapshot-number>
+
+================================================================================
+🔄 How to Rollback After a Bad Update
+================================================================================
+
+METHOD 1: File-level rollback (Recommended for small changes)
+---------------------------------------------------------------
+1. List snapshots to find the one you want:
+   sudo snapper list
+
+2. Restore specific files from snapshot #5:
+   sudo snapper undochange 5..0
+
+3. Or restore entire snapshot:
+   sudo snapper rollback 5
+   sudo reboot
+
+METHOD 2: Manual recovery (For major issues)
+---------------------------------------------------------------
+If your system won't boot:
+
+1. Boot from Arch Linux live USB
+
+2. Decrypt and mount your system (if using LUKS):
+   cryptsetup open /dev/sdXY cryptroot
+   mount -o subvol=@snapshots /dev/mapper/cryptroot /mnt
+
+3. Find the snapshot you want (snapshots are numbered directories):
+   ls /mnt/
+
+4. Mount the snapshot as your root:
+   umount /mnt
+   mount -o subvol=@snapshots/5/snapshot /dev/mapper/cryptroot /mnt
+
+5. Mount other subvolumes and chroot:
+   mount -o subvol=@home /dev/mapper/cryptroot /mnt/home
+   mount /dev/sdX1 /mnt/boot  # EFI partition
+   arch-chroot /mnt
+
+6. Fix your system, then exit and reboot
+
+METHOD 3: Boot from snapshot (Advanced)
+---------------------------------------------------------------
+systemd-boot cannot directly boot from snapshots (kernels are on FAT32 ESP).
+However, you can manually boot with a snapshot:
+
+1. At boot menu, press 'e' to edit boot entry
+2. Change rootflags: add subvol=@snapshots/5/snapshot
+3. Boot with modified entry
+4. Once booted, make snapshot the default if desired
+
+⚠️  Note: This is temporary - changes won't persist across reboots
+
+================================================================================
+⚠️  IMPORTANT: Snapshots Are NOT Backups!
+================================================================================
+
+Snapshots protect against:
+  ✅ Bad system updates
+  ✅ Configuration mistakes
+  ✅ Accidental file deletion
+  ✅ Software bugs
+
+Snapshots do NOT protect against:
+  ❌ Hard drive failure (same disk!)
+  ❌ Ransomware (could encrypt snapshots)
+  ❌ Physical damage
+  ❌ Theft
+
+🔐 For true backups:
+  - Copy important data to external drive
+  - Use tools like: borg, restic, rsync
+  - Store backups off-site (cloud, second location)
+
+================================================================================
+🔧 Advanced Configuration
+================================================================================
+
+Edit snapshot retention policy:
+  sudo vim /etc/snapper/configs/root
+
+Disable hourly snapshots:
+  sudo systemctl disable snapper-timeline.timer
+
+Disable automatic cleanup:
+  sudo systemctl disable snapper-cleanup.timer
+
+Manual cleanup:
+  sudo snapper cleanup timeline
+
+================================================================================
+📦 Optional: Boot Menu Integration
+================================================================================
+
+For automatic snapshot entries in boot menu, you can install (post-install):
+
+Option 1: Install an AUR helper first
+  cd /tmp
+  git clone https://aur.archlinux.org/yay.git
+  cd yay
+  makepkg -si
+
+Option 2: Then install systemd-boot integration (experimental)
+  yay -S systemd-boot-btrfs
+
+⚠️  Warning: systemd-boot snapshot booting is limited because kernels are on
+    FAT32 ESP, not in BTRFS snapshots. Manual recovery is more reliable.
+
+================================================================================
+📚 More Information
+================================================================================
+
+Arch Wiki - Snapper:
+  https://wiki.archlinux.org/title/Snapper
+
+Arch Wiki - BTRFS Snapshots:
+  https://wiki.archlinux.org/title/Btrfs#Snapshots
+
+Test snapshots in a VM before relying on them for real recovery!
+
+Delete this file after reviewing: rm ~/SNAPSHOTS_GUIDE.txt
+EOF
+
+chown ${USERNAME}:${USERNAME} /home/${USERNAME}/SNAPSHOTS_GUIDE.txt
+chmod 644 /home/${USERNAME}/SNAPSHOTS_GUIDE.txt
+
+success "Snapshot guide created at ~/SNAPSHOTS_GUIDE.txt"
 
 success "Security hardening complete"
 success "Finalization complete"
