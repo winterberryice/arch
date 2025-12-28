@@ -530,7 +530,7 @@ confirm_disk_wipe() {
     fi
 }
 
-# Interactive disk selection
+# Interactive disk selection (Phase 2: just pick the disk, don't ask about wiping yet)
 select_installation_disk() {
     ui_header "Disk Selection" >&2
 
@@ -547,12 +547,16 @@ select_installation_disk() {
     local disk_count=$(echo "$disks" | wc -l)
 
     if [[ $disk_count -eq 1 ]]; then
-        # Only one disk, show it and confirm
+        # Only one disk, show basic info
         local disk="$disks"
         info "Found 1 disk: $disk"
-        show_disk_details "$disk"
+        echo "" >&2
 
-        if confirm_disk_wipe "$disk"; then
+        # Show disk overview (but not the scary wipe warnings)
+        lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINT "$disk" >&2
+        echo "" >&2
+
+        if gum confirm "Use this disk for installation?"; then
             # Only the disk path goes to stdout
             echo "$disk"
             return 0
@@ -565,7 +569,7 @@ select_installation_disk() {
         info "Found $disk_count disks"
         echo "" >&2
 
-        # Show brief list first
+        # Show brief list
         echo "Available disks:" >&2
         lsblk -d -o NAME,SIZE,TYPE,MODEL | grep -E "disk|NAME" >&2
         echo "" >&2
@@ -583,10 +587,14 @@ select_installation_disk() {
         # Extract disk path from selection
         local selected_disk=$(echo "$selected_option" | awk '{print $1}')
 
-        # Show details and confirm
-        show_disk_details "$selected_disk"
+        # Show disk overview
+        echo "" >&2
+        info "Selected: $selected_disk"
+        echo "" >&2
+        lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINT "$selected_disk" >&2
+        echo "" >&2
 
-        if confirm_disk_wipe "$selected_disk"; then
+        if gum confirm "Use this disk for installation?"; then
             # Only the disk path goes to stdout
             echo "$selected_disk"
             return 0
