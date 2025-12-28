@@ -203,11 +203,11 @@ prompt_timezone() {
     done
 }
 
-# Interactive configuration - collect all user input
+# Interactive configuration - collect all user input with review screen
 configure_installation() {
     ui_header "Installation Configuration"
 
-    echo "Let's configure your Arch Linux installation."
+    echo "Configure your Arch Linux installation."
     echo ""
 
     # Check for gum
@@ -218,88 +218,205 @@ configure_installation() {
 
     echo ""
 
-    # Collect configuration
-    info "User Account Setup"
-    USERNAME=$(prompt_username)
-    success "Username: $USERNAME"
-    echo ""
-
-    USER_PASSWORD=$(prompt_password "User password")
-    success "User password set"
-    echo ""
-
-    ROOT_PASSWORD=$(prompt_password "Root password")
-    success "Root password set"
-    echo ""
-
-    info "System Configuration"
-    HOSTNAME=$(prompt_hostname)
-    success "Hostname: $HOSTNAME"
-    echo ""
-
-    TIMEZONE=$(prompt_timezone)
-    success "Timezone: $TIMEZONE"
-    echo ""
-
-    # Set locale (default for Phase 2, will be enhanced in Phase 3)
+    # Initialize configuration with defaults/empty values
+    USERNAME=""
+    USER_PASSWORD=""
+    ROOT_PASSWORD=""
+    HOSTNAME="archlinux"
+    TIMEZONE="Europe/Warsaw"
     LOCALE="en_US.UTF-8"
-
-    # Optional: LUKS encryption (Phase 2)
-    info "Security Options"
     ENABLE_ENCRYPTION=false
     LUKS_PASSWORD=""
 
-    if gum confirm "Enable full-disk encryption? (LUKS)
+    # Configuration menu loop
+    while true; do
+        clear
+        ui_header "Installation Configuration"
+
+        # Show current settings
+        echo "Current Configuration:"
+        echo ""
+        echo "  1. User Account"
+        if [[ -n "$USERNAME" ]]; then
+            echo "     └─ Username: $USERNAME"
+            echo "     └─ Password: ●●●●●●●● (set)"
+        else
+            echo "     └─ Not configured"
+        fi
+        echo ""
+
+        echo "  2. Root Password"
+        if [[ -n "$ROOT_PASSWORD" ]]; then
+            echo "     └─ Password: ●●●●●●●● (set)"
+        else
+            echo "     └─ Not configured"
+        fi
+        echo ""
+
+        echo "  3. System Settings"
+        echo "     └─ Hostname: $HOSTNAME"
+        echo "     └─ Timezone: $TIMEZONE"
+        echo "     └─ Locale:   $LOCALE"
+        echo ""
+
+        echo "  4. Encryption"
+        if [[ "$ENABLE_ENCRYPTION" == true ]]; then
+            echo "     └─ LUKS Encryption: Enabled"
+            echo "     └─ Password: ●●●●●●●● (set)"
+        else
+            echo "     └─ LUKS Encryption: Disabled"
+        fi
+        echo ""
+
+        # Check if all required fields are set
+        local all_configured=true
+        if [[ -z "$USERNAME" ]] || [[ -z "$USER_PASSWORD" ]] || [[ -z "$ROOT_PASSWORD" ]]; then
+            all_configured=false
+        fi
+
+        echo "────────────────────────────────────────────────────"
+        echo ""
+
+        # Build menu options
+        local menu_options=()
+        menu_options+=("Configure User Account")
+        menu_options+=("Configure Root Password")
+        menu_options+=("Configure System Settings")
+        menu_options+=("Configure Encryption")
+        menu_options+=("───────────────────────")
+
+        if [[ "$all_configured" == true ]]; then
+            menu_options+=("✓ Proceed with Installation")
+        else
+            menu_options+=("⚠ Complete Required Settings First")
+        fi
+        menu_options+=("Exit Installer")
+
+        # Show menu
+        choice=$(gum choose --header "Select an option:" "${menu_options[@]}")
+
+        case "$choice" in
+            "Configure User Account")
+                echo ""
+                info "User Account Setup"
+                USERNAME=$(prompt_username)
+                success "Username: $USERNAME"
+                echo ""
+                USER_PASSWORD=$(prompt_password "User password")
+                success "User password set"
+                echo ""
+                gum style --foreground 2 "✓ User account configured"
+                sleep 1
+                ;;
+
+            "Configure Root Password")
+                echo ""
+                info "Root Password Setup"
+                ROOT_PASSWORD=$(prompt_password "Root password")
+                success "Root password set"
+                echo ""
+                gum style --foreground 2 "✓ Root password configured"
+                sleep 1
+                ;;
+
+            "Configure System Settings")
+                echo ""
+                info "System Configuration"
+                HOSTNAME=$(prompt_hostname)
+                success "Hostname: $HOSTNAME"
+                echo ""
+                TIMEZONE=$(prompt_timezone)
+                success "Timezone: $TIMEZONE"
+                echo ""
+                gum style --foreground 2 "✓ System settings configured"
+                sleep 1
+                ;;
+
+            "Configure Encryption")
+                echo ""
+                info "Security Options"
+
+                if gum confirm "Enable full-disk encryption? (LUKS)
 
   ✅ Protects all data at rest
   ⚠️  Requires password on every boot
   ⚠️  If you forget password, data is lost forever"; then
 
-        ENABLE_ENCRYPTION=true
+                    ENABLE_ENCRYPTION=true
 
-        # Prompt for LUKS password
-        LUKS_PASSWORD=$(prompt_luks_password)
+                    # Prompt for LUKS password
+                    LUKS_PASSWORD=$(prompt_luks_password)
 
-        if [[ -z "$LUKS_PASSWORD" ]]; then
-            warn "Encryption setup cancelled"
-            ENABLE_ENCRYPTION=false
-        else
-            success "Encryption will be enabled"
-        fi
-    else
-        info "Encryption will be disabled"
-    fi
-    echo ""
+                    if [[ -z "$LUKS_PASSWORD" ]]; then
+                        warn "Encryption setup cancelled"
+                        ENABLE_ENCRYPTION=false
+                    else
+                        success "Encryption will be enabled"
+                    fi
+                else
+                    info "Encryption will be disabled"
+                    ENABLE_ENCRYPTION=false
+                    LUKS_PASSWORD=""
+                fi
 
-    # Show configuration summary
-    ui_header "Configuration Summary"
-    echo "Username:    $USERNAME"
-    echo "Hostname:    $HOSTNAME"
-    echo "Timezone:    $TIMEZONE"
-    echo "Locale:      $LOCALE"
-    echo "Encryption:  $( [[ "$ENABLE_ENCRYPTION" == true ]] && echo "Enabled (LUKS)" || echo "Disabled" )"
-    echo ""
+                echo ""
+                gum style --foreground 2 "✓ Encryption configured"
+                sleep 1
+                ;;
 
-    # Confirm
-    if gum confirm "Proceed with this configuration?"; then
-        success "Configuration confirmed!"
-        echo ""
+            "✓ Proceed with Installation")
+                # Final confirmation
+                clear
+                ui_header "Ready to Install"
+                echo ""
+                echo "Installation Configuration Summary:"
+                echo ""
+                echo "  User Account:  $USERNAME"
+                echo "  Hostname:      $HOSTNAME"
+                echo "  Timezone:      $TIMEZONE"
+                echo "  Locale:        $LOCALE"
+                echo "  Encryption:    $( [[ "$ENABLE_ENCRYPTION" == true ]] && echo "Enabled (LUKS)" || echo "Disabled" )"
+                echo ""
+                echo "────────────────────────────────────────────────────"
+                echo ""
 
-        # Export configuration variables
-        export TIMEZONE
-        export LOCALE
-        export HOSTNAME
-        export USERNAME
-        export USER_PASSWORD
-        export ROOT_PASSWORD
-        export ENABLE_ENCRYPTION
-        export LUKS_PASSWORD
+                if gum confirm "Proceed with installation using these settings?"; then
+                    success "Configuration confirmed!"
+                    echo ""
 
-        return 0
-    else
-        warn "Configuration cancelled by user"
-        exit 0
-    fi
+                    # Export configuration variables
+                    export TIMEZONE
+                    export LOCALE
+                    export HOSTNAME
+                    export USERNAME
+                    export USER_PASSWORD
+                    export ROOT_PASSWORD
+                    export ENABLE_ENCRYPTION
+                    export LUKS_PASSWORD
+
+                    return 0
+                fi
+                ;;
+
+            "⚠ Complete Required Settings First")
+                warn "Please configure all required settings:"
+                if [[ -z "$USERNAME" ]] || [[ -z "$USER_PASSWORD" ]]; then
+                    echo "  • User Account (username and password)"
+                fi
+                if [[ -z "$ROOT_PASSWORD" ]]; then
+                    echo "  • Root Password"
+                fi
+                echo ""
+                echo "Press ENTER to continue..."
+                read
+                ;;
+
+            "Exit Installer")
+                warn "Installation cancelled by user"
+                exit 0
+                ;;
+        esac
+    done
 }
 
 # --- DISK SELECTION ---
