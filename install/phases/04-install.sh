@@ -22,7 +22,6 @@ BASE_PACKAGES=(
     vim
     git
     snapper
-    snap-pac
 )
 
 # Add microcode
