@@ -56,15 +56,17 @@ if [[ "$HAS_NVIDIA" == "true" ]]; then
     sed -i 's/^MODULES=.*/MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)/' /etc/mkinitcpio.conf
 fi
 
-# Update hooks (add encrypt hook if encryption is enabled)
+# Update hooks (add encrypt and btrfs-overlayfs hooks)
 if [[ "$ENABLE_ENCRYPTION" == "true" ]]; then
-    info "Adding encrypt hook for LUKS..."
-    # Hooks order: base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck
+    info "Adding encrypt and btrfs-overlayfs hooks for LUKS + snapshots..."
+    # Hooks order: base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck btrfs-overlayfs
     # keyboard/keymap MUST come before encrypt (to type password)
     # encrypt MUST come before filesystems (to unlock before mount)
-    sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck)/' /etc/mkinitcpio.conf
+    # btrfs-overlayfs MUST come after filesystems (for snapshot support)
+    sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)/' /etc/mkinitcpio.conf
 else
-    sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)/' /etc/mkinitcpio.conf
+    info "Adding btrfs-overlayfs hook for snapshot support..."
+    sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck btrfs-overlayfs)/' /etc/mkinitcpio.conf
 fi
 
 # Rebuild initramfs
