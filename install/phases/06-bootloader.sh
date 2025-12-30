@@ -22,14 +22,11 @@ info "Installing Limine bootloader..."
 info "EFI partition: $EFI_PARTITION"
 info "BTRFS partition: $BTRFS_PARTITION"
 
-# Install Limine to the ESP
-info "Installing Limine to ESP..."
-limine bios-install "$EFI_PARTITION"
-
 # Create EFI directory structure
+info "Setting up EFI boot directory..."
 mkdir -p /boot/EFI/BOOT
 
-# Copy Limine EFI file
+# Copy Limine EFI file (UEFI mode - no BIOS install needed)
 info "Copying Limine EFI bootloader..."
 cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/
 
