@@ -22,6 +22,7 @@ BASE_PACKAGES=(
     vim
     git
     snapper
+    limine
 )
 
 # Add microcode
