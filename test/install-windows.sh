@@ -6,11 +6,38 @@ set -e
 DISK_NAME="windows-linux-dualboot.qcow2"
 WINDOWS_ISO="${1:-windows11.iso}"
 
+# Auto-detect OVMF firmware (same as qemu-test.sh)
+detect_ovmf() {
+    local search_paths=(
+        "/usr/share/ovmf/x64/OVMF_CODE.fd"
+        "/usr/share/edk2-ovmf/x64/OVMF_CODE.fd"
+        "/usr/share/edk2/x64/OVMF_CODE.4m.fd"
+        "/usr/share/edk2/x64/OVMF_CODE.fd"
+        "/usr/share/OVMF/OVMF_CODE.fd"
+        "/usr/share/qemu/ovmf-x86_64-code.bin"
+        "/usr/share/edk2/ovmf/OVMF_CODE.fd"
+    )
+
+    for path in "${search_paths[@]}"; do
+        if [[ -f "$path" ]]; then
+            OVMF_PATH="$path"
+            echo "✅ Found OVMF: $OVMF_PATH"
+            return 0
+        fi
+    done
+
+    echo "❌ Error: OVMF firmware not found!"
+    echo "Install with: sudo pacman -S edk2-ovmf"
+    exit 1
+}
+
 if [[ ! -f "$WINDOWS_ISO" ]]; then
     echo "❌ Error: Windows ISO not found: $WINDOWS_ISO"
     echo "Usage: $0 /path/to/windows11.iso"
     exit 1
 fi
+
+detect_ovmf
 
 echo "🪟 Installing Windows to dual-boot disk..."
 echo ""
@@ -29,10 +56,10 @@ qemu-system-x86_64 \
   -m 4G \
   -cpu host \
   -smp 2 \
-  -drive file="$DISK_NAME",if=virtio \
+  -drive if=pflash,format=raw,readonly=on,file="$OVMF_PATH" \
+  -drive file="$DISK_NAME",format=qcow2,if=virtio \
   -cdrom "$WINDOWS_ISO" \
   -boot d \
-  -bios /usr/share/edk2-ovmf/x64/OVMF.fd \
   -vga virtio \
   -display sdl \
   -device usb-ehci \
