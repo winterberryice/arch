@@ -54,7 +54,7 @@ umount /.snapshots || warn "/.snapshots not mounted or already unmounted"
 
 # Step 2: Create snapper config for root (this creates /.snapshots as a subvolume)
 info "Creating snapper config for root filesystem..."
-snapper -c root create-config /
+snapper --no-dbus -c root create-config /
 
 # Step 3: Delete the default .snapshots subvolume created by snapper
 info "Removing default snapper subvolume..."
