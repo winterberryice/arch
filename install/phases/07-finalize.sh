@@ -52,6 +52,10 @@ info "BTRFS device: $BTRFS_DEV"
 info "Unmounting /.snapshots..."
 umount /.snapshots || warn "/.snapshots not mounted or already unmounted"
 
+# Step 1.5: Remove the .snapshots directory/mountpoint
+info "Removing /.snapshots directory..."
+rm -rf /.snapshots
+
 # Step 2: Create snapper config for root (this creates /.snapshots as a subvolume)
 info "Creating snapper config for root filesystem..."
 snapper --no-dbus -c root create-config /
