@@ -1,13 +1,18 @@
 # Phase 3 Implementation Complete ✅
 
-**Date**: 2025-12-28
-**Status**: Implementation Complete, Ready for Testing
+**Date**: 2025-12-30
+**Status**: Implementation Complete with Limine Integration, Ready for Testing
 
 ---
 
 ## Overview
 
-Phase 3 successfully implements automatic BTRFS snapshot management using Snapper for system rollback and recovery. The installer now provides comprehensive snapshot automation without requiring manual post-installation configuration.
+Phase 3 successfully implements automatic BTRFS snapshot management using Snapper with Limine bootloader integration for system rollback and recovery. The installer now provides:
+- Automatic snapshot creation and cleanup
+- **Boot-from-snapshot capability via Limine boot menu**
+- UKI (Unified Kernel Images) for kernel-snapshot version matching
+- Windows dual-boot support with automatic OS detection
+- Zero manual post-installation configuration required
 
 ---
 
@@ -17,7 +22,10 @@ Phase 3 successfully implements automatic BTRFS snapshot management using Snappe
 
 **Packages Installed**:
 - `snapper` - BTRFS snapshot management tool
-- `snap-pac` - Automatic pre/post snapshots for pacman operations
+- `limine` - Modern UEFI bootloader with BTRFS support
+- `yay` - AUR helper (installed during setup for AUR packages)
+- `limine-mkinitcpio-hook` (AUR) - Provides btrfs-overlayfs hook and UKI generation
+- `limine-snapper-sync` (AUR) - Automatic snapshot boot entry generation
 
 **Configuration**:
 - Snapper configured for root filesystem (`/`)
@@ -25,7 +33,7 @@ Phase 3 successfully implements automatic BTRFS snapshot management using Snappe
 - Automatic mounting of `@snapshots` at `/.snapshots`
 - Pre-configured retention policies
 
-**Implementation Location**: `install/phases/04-install.sh:24-25`, `install/phases/07-finalize.sh:37-156`
+**Implementation Location**: `install/phases/04-install.sh`, `install/phases/06-bootloader.sh`, `install/phases/07-finalize.sh`, `install/lib/aur.sh`
 
 ### 2. Snapshot Retention Policies
 
@@ -36,10 +44,10 @@ Phase 3 successfully implements automatic BTRFS snapshot management using Snappe
 - **Monthly**: 3 snapshots retained
 - **Yearly**: 0 snapshots (disabled)
 
-**Pre/Post Snapshots** (Automatic, pacman operations):
-- Created before and after every `pacman -S`, `pacman -Syu`, etc.
-- Allows comparison and rollback after updates
-- Old pairs automatically cleaned up
+**Manual Snapshots** (User-initiated):
+- Users create snapshots before system changes via `snapper create`
+- Recommended: Create snapshot before major updates or system modifications
+- Future enhancement: Custom `update-system` script will automate this
 
 **Space Management**:
 - Maximum snapshot space: 50% of filesystem
@@ -62,19 +70,25 @@ Phase 3 successfully implements automatic BTRFS snapshot management using Snappe
 
 **Implementation Location**: `install/phases/07-finalize.sh:138-143`
 
-### 4. Pacman Hook Integration (snap-pac)
+### 4. Limine Bootloader Integration
 
 **Functionality**:
-- Automatically creates "pre" snapshot before pacman operations
-- Creates "post" snapshot after successful completion
-- Snapshots tagged with package names and operation type
-- No additional configuration needed
+- Limine bootloader with native BTRFS support
+- Automatic snapshot boot entry generation via `limine-snapper-sync`
+- UKI (Unified Kernel Images) for kernel-snapshot version matching
+- Windows dual-boot auto-detection via `FIND_BOOTLOADERS`
+
+**Boot Menu Features**:
+- Up to 5 most recent snapshots appear automatically in boot menu
+- Each snapshot entry boots with its matching kernel version
+- Snapshots boot in read-only mode for safety
+- No manual boot entry configuration needed
 
 **Use Cases**:
-- Rollback after broken kernel update
-- Recover from dependency conflicts
-- Undo package removals
-- Compare system state before/after updates
+- Boot from snapshot after failed system update
+- Test risky changes with easy rollback
+- Recover from kernel/driver incompatibilities
+- Compare system behavior across snapshots
 
 ### 5. User Documentation
 
@@ -84,10 +98,10 @@ Phase 3 successfully implements automatic BTRFS snapshot management using Snappe
 **Documented Topics**:
 - What's configured and enabled
 - Common snapshot commands
-- Three rollback methods (file-level, manual recovery, boot-from-snapshot)
+- Three rollback methods (file-level, manual recovery, **boot-from-snapshot via Limine**)
 - Important limitations (snapshots ≠ backups)
 - Advanced configuration options
-- Optional boot menu integration (post-install)
+- Limine boot menu features and usage
 
 **Implementation Location**: `install/phases/07-finalize.sh:291-462`
 
@@ -125,35 +139,66 @@ Phase 3 successfully implements automatic BTRFS snapshot management using Snappe
 - Snapshots are encrypted along with the rest of the filesystem
 - No snapshot data leakage outside LUKS container
 
-### Boot Menu Integration Research
+### Limine Bootloader Implementation
 
-**Researched Tools**:
-- `systemd-boot-btrfs` (AUR)
-- `snapper_systemd_boot` (GitHub)
-- `systemd-boot-snapshots` (GitHub)
+**Why Limine Instead of systemd-boot**:
+- systemd-boot cannot boot from BTRFS snapshots (requires FAT32 ESP)
+- Limine has native BTRFS support and can read snapshots
+- Inspired by omarchy's successful Limine + snapper implementation
+- Enables automatic snapshot boot entries without experimental tools
 
-**Fundamental Limitation Identified**:
-- systemd-boot requires FAT32 ESP (EFI System Partition)
-- Kernel and initramfs reside on ESP, not in BTRFS snapshots
-- BTRFS snapshots cannot include files from FAT32 partition
-- Boot menu tools can create entries but cannot copy kernels to snapshots
+**Implementation Strategy**:
+1. **Replace systemd-boot with Limine** - Complete bootloader migration in `06-bootloader.sh`
+2. **Add btrfs-overlayfs hook** - Enable read-only snapshot booting via mkinitcpio
+3. **Install AUR packages** - `limine-mkinitcpio-hook` and `limine-snapper-sync`
+4. **UKI generation** - Create Unified Kernel Images for each snapshot
+5. **Auto-detection** - Configure `FIND_BOOTLOADERS=yes` for Windows dual-boot
 
-**Comparison with GRUB**:
-- GRUB can read BTRFS directly from bootloader
-- `grub-btrfs` fully supports snapshot booting
-- systemd-boot cannot read BTRFS (requires FAT32)
+**Key Components**:
 
-**Decision**: Manual recovery documented instead of automated boot menu
-- Manual recovery is more reliable
-- Avoids dependency on experimental AUR packages
-- Boot menu integration documented as optional post-install step
-- Focus on core value: automatic snapshots + snap-pac
+**limine-mkinitcpio-hook** (AUR):
+- Provides `btrfs-overlayfs` mkinitcpio hook
+- Generates UKIs (kernel + initramfs + cmdline in single .efi file)
+- Ensures kernel-module version matching for snapshot boots
+- Stored on ESP at `/boot/EFI/Linux/*.efi`
+
+**limine-snapper-sync** (AUR):
+- Monitors snapper snapshots via systemd service
+- Automatically generates Limine boot entries for snapshots
+- Updates boot menu when snapshots are created/deleted
+- Configurable via `/etc/default/limine`
+
+**UKI Approach** (Kernel Duplication):
+- **ESP (/boot)**: UKIs for current system + snapshots (unencrypted, required by UEFI)
+- **BTRFS (@)**: Full kernel + modules (encrypted with LUKS)
+- Each snapshot gets its own UKI with matching kernel version
+- Prevents kernel-module version mismatch issues
+
+**Configuration** (`/etc/default/limine`):
+```
+TARGET_OS_NAME="Arch Linux"
+ESP_PATH="/boot"
+ENABLE_UKI=yes
+CUSTOM_UKI_NAME="arch"
+ENABLE_LIMINE_FALLBACK=yes
+FIND_BOOTLOADERS=yes           # Auto-detect Windows
+BOOT_ORDER="*, *fallback, Snapshots"
+MAX_SNAPSHOT_ENTRIES=5
+SNAPSHOT_FORMAT_CHOICE=5
+```
+
+**Benefits**:
+- Fully automated snapshot booting (no manual configuration)
+- Windows dual-boot compatibility
+- Kernel version matching guaranteed
+- Read-only snapshot boots (safe by default)
+- Professional boot menu experience
 
 **References**:
-- [Snapper - ArchWiki](https://wiki.archlinux.org/title/Snapper)
-- [GitHub - systemd-boot-btrfs](https://github.com/maslias/systemd-boot-btrfs)
-- [GitHub - systemd-boot-snapshots](https://github.com/uszie/systemd-boot-snapshots)
-- [Snapper systemd-boot integration - EndeavourOS](https://forum.endeavouros.com/t/snapper-systemd-boot-integration/37451)
+- [omarchy GitHub](https://github.com/winterberryice/omarchy) - Implementation inspiration
+- [limine-mkinitcpio-hook (AUR)](https://aur.archlinux.org/packages/limine-mkinitcpio-hook)
+- [limine-snapper-sync (AUR)](https://aur.archlinux.org/packages/limine-snapper-sync)
+- [Limine Bootloader](https://limine-bootloader.org/)
 
 ---
 
@@ -162,8 +207,22 @@ Phase 3 successfully implements automatic BTRFS snapshot management using Snappe
 ### Modified Files
 
 **`install/phases/04-install.sh`**:
-- Added `snapper` to `BASE_PACKAGES` array (line 24)
-- Added `snap-pac` to `BASE_PACKAGES` array (line 25)
+- Added `snapper` to `BASE_PACKAGES` array
+- Added `limine` to `BASE_PACKAGES` array
+- Removed `snap-pac` (replaced with manual snapshot workflow)
+
+**`install/phases/05-configure.sh`**:
+- Added `btrfs-overlayfs` hook to mkinitcpio configuration
+- Hook added for both encrypted and non-encrypted configurations
+- Enables read-only snapshot booting
+
+**`install/phases/06-bootloader.sh`**:
+- **COMPLETE REWRITE**: Replaced systemd-boot with Limine
+- Install Limine to ESP with `limine bios-install`
+- Copy Limine EFI files (`BOOTX64.EFI`)
+- Create `/boot/limine.conf` with Tokyo Night color scheme
+- Configure kernel command line parameters
+- Set up boot menu structure
 
 **`install/phases/07-finalize.sh`**:
 - Replaced placeholder snapper section with full configuration (lines 37-156)
@@ -171,12 +230,24 @@ Phase 3 successfully implements automatic BTRFS snapshot management using Snappe
 - Configured retention policies
 - Enabled systemd timers
 - Created initial snapshot
-- Updated security checklist to reflect snapshot configuration (line 268-271)
-- Added `SNAPSHOTS_GUIDE.txt` user documentation (lines 291-462)
+- **NEW**: Limine AUR package installation section (lines 158-245):
+  - Install yay AUR helper via `install/lib/aur.sh`
+  - Install `limine-mkinitcpio-hook` from AUR
+  - Install `limine-snapper-sync` from AUR
+  - Create `/etc/default/limine` configuration
+  - Run `limine-update` to generate UKIs
+  - Rebuild initramfs with Limine hooks
+  - Enable `limine-snapper-sync.service`
+- Updated `SNAPSHOTS_GUIDE.txt` with Limine boot menu documentation
 
-### No New Files Created
+### New Files Created
 
-All changes integrated into existing installer files. Documentation created at user's home directory during installation.
+**`install/lib/aur.sh`**:
+- AUR package management library
+- `build_aur_package()` - Build AUR packages as non-root user
+- `install_yay()` - Install yay AUR helper during installation
+- `install_from_aur()` - Install any AUR package
+- Handles temporary sudoers configuration for build process
 
 ---
 
@@ -184,11 +255,24 @@ All changes integrated into existing installer files. Documentation created at u
 
 ### Basic Functionality
 - [ ] Snapper package installed successfully
-- [ ] snap-pac package installed successfully
+- [ ] Limine bootloader installed successfully
 - [ ] Snapper config created at `/etc/snapper/configs/root`
 - [ ] `/.snapshots` directory exists and is mounted
 - [ ] `@snapshots` subvolume mounted at `/.snapshots` (verify with `findmnt`)
 - [ ] Initial snapshot created (verify with `snapper list`)
+
+### Limine Integration
+- [ ] Limine bootloader boots successfully
+- [ ] `limine.conf` created at `/boot/limine.conf`
+- [ ] yay AUR helper installed
+- [ ] `limine-mkinitcpio-hook` installed from AUR
+- [ ] `limine-snapper-sync` installed from AUR
+- [ ] `/etc/default/limine` configuration file created
+- [ ] UKIs generated at `/boot/EFI/Linux/*.efi`
+- [ ] `btrfs-overlayfs` hook added to mkinitcpio
+- [ ] `limine-snapper-sync.service` enabled
+- [ ] Snapshot entries appear in Limine boot menu
+- [ ] Windows detected in boot menu (if dual-boot setup)
 
 ### Retention Policies
 - [ ] Retention config matches specification (5h/7d/4w/3m/0y)
@@ -201,11 +285,12 @@ All changes integrated into existing installer files. Documentation created at u
 - [ ] `snapper-cleanup.timer` enabled (verify with `systemctl status`)
 - [ ] Timers activate on first boot
 
-### Pacman Integration
-- [ ] snap-pac hooks present in `/usr/share/libalpm/hooks/`
-- [ ] Snapshots created before `pacman -S <package>`
-- [ ] Snapshots created after successful installation
-- [ ] Snapshot pairs tagged with package names
+### Snapshot Booting
+- [ ] Can boot from snapshot via Limine menu
+- [ ] Snapshot boots with matching kernel version
+- [ ] Snapshot boots in read-only mode
+- [ ] Can return to main system after snapshot boot
+- [ ] Multiple snapshots appear in boot menu (up to 5)
 
 ### User Documentation
 - [ ] `SNAPSHOTS_GUIDE.txt` created in user home directory
@@ -230,15 +315,17 @@ All changes integrated into existing installer files. Documentation created at u
 
 ## Known Limitations
 
-### 1. Boot Menu Integration Not Automated
+### 1. Boot Menu Integration FULLY AUTOMATED ✅
 
-**Status**: Documented as optional post-install step
+**Status**: ✅ Implemented via Limine bootloader
 
-**Reason**: systemd-boot cannot boot from BTRFS snapshots due to FAT32 ESP requirement
+**Implementation**: Limine's native BTRFS support + `limine-snapper-sync` service
 
-**Workaround**: Manual recovery process documented in user guide
-
-**Future**: Users can optionally install `systemd-boot-btrfs` from AUR (experimental)
+**Features**:
+- Automatic snapshot boot entries (up to 5 most recent)
+- Kernel version matching via UKIs
+- Windows dual-boot auto-detection
+- Zero manual configuration required
 
 ### 2. Hourly Snapshots May Be Aggressive
 
@@ -261,16 +348,19 @@ All changes integrated into existing installer files. Documentation created at u
 
 **Future Enhancement**: Could add optional home snapshots in Phase 4+
 
-### 4. AUR Helper Not Installed
+### 4. Manual Snapshot Creation for Updates
 
-**Decision**: No AUR helper (yay/paru) installed during base installation
+**Current Implementation**: No automatic pre/post snapshots for pacman operations
 
-**Reason**:
-- Adds complexity to installer
-- Security concerns (building AUR packages as root)
-- Base installation should be minimal
+**Reason**: Removed `snap-pac` in favor of manual snapshot workflow
 
-**Workaround**: Users can install AUR helper post-installation if desired for `systemd-boot-btrfs`
+**Recommendation**: Users should create manual snapshots before major updates:
+```bash
+sudo snapper create --description "Before system update"
+sudo pacman -Syu
+```
+
+**Future Enhancement**: Custom `update-system` script will automate snapshot creation
 
 ---
 
@@ -291,43 +381,54 @@ All changes integrated into existing installer files. Documentation created at u
 - Systemd timer integration
 - Active development
 
-### Why snap-pac?
+### Why Remove snap-pac?
 
-**Functionality**: Creates automatic pre/post snapshots for pacman operations
+**Initial Plan**: Use `snap-pac` for automatic pre/post snapshots before pacman operations
 
-**Benefits**:
-- Zero-configuration (just install and forget)
-- Automatic protection for all system updates
-- Proper snapshot tagging with operation details
-- Essential for rolling release (Arch Linux)
-
-**Alternative**: `snapper-rollback` - Provides additional rollback helpers but less actively maintained
-
-### Why Not Install AUR Helper?
+**Decision**: Removed in favor of manual snapshot workflow
 
 **Reasons**:
-1. **Security**: Building AUR packages requires user context, not root
-2. **Complexity**: Would need base-devel, git, and build environment
-3. **Philosophy**: Base installation should be minimal and secure
-4. **User Choice**: Users should choose their own AUR helper (yay vs paru)
+- User preference for explicit snapshot control
+- Reduces automatic background operations
+- Manual snapshots encourage intentional system maintenance
+- Planned `update-system` script will provide guided snapshot workflow
 
-**Decision**: Document post-install AUR helper installation in user guide
+**Trade-off**: Users must remember to create snapshots before updates, but gain more control
 
-### Why Document Manual Recovery Instead of Automating Boot Menu?
+### Why Install AUR Helper (yay)?
 
-**Technical Constraints**:
-- systemd-boot cannot read BTRFS (requires FAT32 ESP)
-- Kernels stored on ESP, not in snapshots
-- Available tools are experimental and limited
+**Necessity**: Required for Limine snapshot integration packages
 
-**Reliability**:
-- Manual recovery always works (even if tools fail)
-- Doesn't depend on third-party AUR packages
-- More maintainable long-term
+**AUR Packages Needed**:
+- `limine-mkinitcpio-hook` - btrfs-overlayfs hook and UKI generation
+- `limine-snapper-sync` - Automatic snapshot boot entries
 
-**User Empowerment**:
-- Understanding manual process helps users learn system architecture
-- Users can choose to install automation later if desired
+**Implementation**:
+1. **Security**: Build as non-root user (created `install/lib/aur.sh` library)
+2. **Temporary sudoers**: Grant pacman access only during build, then revoke
+3. **Choice**: yay selected for simplicity and wide adoption
+4. **Timing**: Installed in chroot during Phase 7 (finalize)
+
+**Trade-off**: Adds complexity but enables fully automated snapshot booting
+
+### Why Limine Instead of GRUB for Snapshot Booting?
+
+**GRUB Alternative**: GRUB + `grub-btrfs` is a popular snapshot boot solution
+
+**Why Limine**:
+1. **Modern Design**: Limine is cleaner and more modern than GRUB
+2. **omarchy Inspiration**: Proven working implementation in omarchy project
+3. **UKI Support**: Native UKI (Unified Kernel Images) support
+4. **Simpler Configuration**: Easier to configure than GRUB
+5. **Better UEFI Integration**: Designed for UEFI-first systems
+6. **Windows Dual-Boot**: `FIND_BOOTLOADERS` feature auto-detects other OSes
+
+**GRUB Advantages**:
+- More widely adopted in Linux community
+- Better documentation and community support
+- Legacy BIOS support (not needed for modern systems)
+
+**Decision**: Limine's modern approach and omarchy's success story made it the better choice for this installer
 
 ---
 
@@ -344,18 +445,46 @@ All changes integrated into existing installer files. Documentation created at u
    └─> snapper-timeline.timer activates (hourly snapshots begin)
    └─> snapper-cleanup.timer activates (automatic cleanup)
 
-3. User updates system
+3. User creates snapshot before update (manual)
+   └─> snapper create --description "Before update"
    └─> pacman -Syu
-   └─> snap-pac creates "pre" snapshot
    └─> Updates installed
-   └─> snap-pac creates "post" snapshot
+   └─> limine-snapper-sync detects new snapshot
+   └─> Boot menu entry created automatically
 
 4. Hourly (automatic)
    └─> snapper creates timeline snapshot
    └─> Old snapshots cleaned up per retention policy
+   └─> limine-snapper-sync keeps boot menu updated
 ```
 
-### Manual Rollback (After Bad Update)
+### Boot from Snapshot (Limine Menu) - RECOMMENDED
+
+```
+1. User notices problem after update or wants to test previous state
+
+2. Reboot the system
+   sudo reboot
+
+3. In Limine boot menu, select:
+   • Arch Linux (Snapshot #1 - Before system update)
+   • [or any other snapshot entry]
+
+4. System boots from snapshot in read-only mode
+   └─> Boots with matching kernel version (via UKI)
+   └─> All files from snapshot's point in time
+   └─> Safe to test without affecting main system
+
+5. If satisfied, can make changes permanent:
+   sudo snapper rollback 1
+   sudo reboot
+
+6. Or just reboot to return to main system:
+   sudo reboot
+   [Select "Arch Linux" instead of snapshot]
+```
+
+### Manual Rollback (Alternative Method)
 
 ```
 1. User notices problem after update
@@ -414,12 +543,14 @@ All changes integrated into existing installer files. Documentation created at u
 4. Check `snapper list` shows initial snapshot
 5. Verify `/.snapshots` mounted correctly
 
-**Test Scenario 2: Pacman Integration**
+**Test Scenario 2: Limine Boot Menu**
 1. Boot installed system
-2. Run `pacman -S neofetch`
-3. Verify pre/post snapshots created
-4. Check snapshot tags include package name
-5. Verify snapshot count increases
+2. Check Limine boot menu shows:
+   - Arch Linux (main entry)
+   - Arch Linux (Fallback)
+   - Snapshots section with initial snapshot
+3. Verify UKIs exist at `/boot/EFI/Linux/`
+4. If dual-boot: Verify Windows entry appears
 
 **Test Scenario 3: Timeline Snapshots**
 1. Wait 1 hour (or manually trigger timer)
@@ -427,17 +558,26 @@ All changes integrated into existing installer files. Documentation created at u
 3. Verify new timeline snapshot created
 4. Check snapshot type is "timeline"
 
-**Test Scenario 4: Rollback**
+**Test Scenario 4: Snapshot Booting**
+1. Create manual snapshot: `snapper create -d "Test snapshot"`
+2. Reboot and enter Limine boot menu
+3. Select snapshot entry from menu
+4. Verify system boots from snapshot
+5. Check kernel version matches snapshot
+6. Reboot to main system
+
+**Test Scenario 5: Rollback**
 1. Create test file: `touch /test-file`
 2. Create manual snapshot: `snapper create -d "Before deletion"`
 3. Delete file: `rm /test-file`
 4. Rollback: `snapper undochange X..0`
 5. Verify file restored
 
-**Test Scenario 5: LUKS Compatibility**
+**Test Scenario 6: LUKS Compatibility**
 1. Install with LUKS encryption enabled
 2. Verify all above tests work with encrypted filesystem
 3. Test manual recovery from live USB
+4. Verify snapshot boot works with LUKS encryption
 
 ### Real Hardware Testing
 
@@ -459,19 +599,25 @@ All changes integrated into existing installer files. Documentation created at u
 
 ### Phase 3 Complete When:
 
-- [x] snapper and snap-pac installed during base installation
+- [x] snapper and limine installed during base installation
 - [x] Snapper configured for root filesystem automatically
 - [x] `@snapshots` subvolume properly integrated
 - [x] Retention policies configured (5h/7d/4w/3m/0y)
 - [x] Systemd timers enabled (timeline + cleanup)
-- [x] snap-pac creates pre/post snapshots for pacman
+- [x] Limine bootloader replaces systemd-boot
+- [x] btrfs-overlayfs hook added to mkinitcpio
+- [x] yay AUR helper installed during setup
+- [x] limine-mkinitcpio-hook installed from AUR
+- [x] limine-snapper-sync installed from AUR
+- [x] /etc/default/limine configured for snapshots
 - [x] Initial snapshot created at installation
 - [x] LUKS encryption compatibility verified
-- [x] User documentation created (SNAPSHOTS_GUIDE.txt)
-- [x] Manual recovery process documented
-- [x] Boot menu integration researched and documented
+- [x] User documentation created (SNAPSHOTS_GUIDE.txt with Limine instructions)
+- [x] Boot menu integration fully automated
+- [x] Windows dual-boot support configured
 - [ ] QEMU testing passed
 - [ ] Real hardware testing passed
+- [ ] Dual-boot testing passed (Windows + Linux)
 
 **Current Status**: Implementation complete, ready for testing
 
@@ -542,30 +688,42 @@ All changes integrated into existing installer files. Documentation created at u
 ✅ **Automatic Snapshot Management**
 - Zero-configuration snapshot protection
 - Hourly timeline snapshots
-- Pre/post snapshots for every pacman operation
+- Manual snapshot creation recommended before updates
+- Future: Custom `update-system` script for guided workflow
 
 ✅ **Professional Configuration**
 - Industry-standard retention policies
 - Proper BTRFS subvolume integration
 - LUKS encryption compatibility
 
+✅ **Limine Bootloader Integration** (NEW!)
+- Fully automated snapshot boot entries
+- UKI (Unified Kernel Images) for kernel version matching
+- Windows dual-boot auto-detection
+- Read-only snapshot booting for safety
+- Up to 5 snapshots in boot menu
+
 ✅ **Comprehensive Documentation**
 - Detailed user guide created at installation
-- Three rollback methods documented
+- Three rollback methods documented (including boot-from-snapshot)
 - Manual recovery process for emergencies
+- Limine boot menu usage explained
 
-✅ **Technical Research**
-- systemd-boot limitations identified and documented
-- Boot menu integration options researched
-- Manual recovery prioritized over experimental automation
+✅ **AUR Package Integration**
+- yay AUR helper installed during setup
+- limine-mkinitcpio-hook for btrfs-overlayfs support
+- limine-snapper-sync for automatic boot entries
+- Secure build process (non-root user builds)
 
 ### What's Next
 
 **Testing Phase**:
 1. QEMU validation of all features
-2. Real hardware testing
-3. Rollback scenario verification
-4. Documentation accuracy review
+2. Dual-boot testing (Windows + Linux)
+3. Snapshot boot testing via Limine menu
+4. Real hardware testing
+5. Rollback scenario verification
+6. Documentation accuracy review
 
 **After Testing**:
 - Mark testing checklist items complete
@@ -584,12 +742,27 @@ All changes integrated into existing installer files. Documentation created at u
 
 **Phase 3 Implementation**:
 ```
-<Will be added after commit>
+74ae801 Add Limine AUR package installation and snapshot configuration
+3a7976c Add btrfs-overlayfs hook to mkinitcpio for snapshot booting
+917227e Replace systemd-boot with Limine bootloader for snapshot support
+c1b601d Fix Windows ISO boot order in QEMU
+958b9b9 Fix OVMF firmware path detection in dual-boot test scripts
+62a8b04 Add dual-boot test preparation scripts
+696ed95 vendor omarchy
+a85decf Remove snap-pac package from base installation
+e3fec0c Implement Phase 3: Automatic Snapshot Configuration with Snapper
 ```
 
-**Files Modified**: 2
-**Lines Added**: ~500+
-**Lines Changed**: ~20
+**Files Modified**: 8
+**New Files Created**: 5
+**Lines Added**: ~1000+
+**Lines Changed**: ~300+
+
+**Major Changes**:
+- Complete bootloader migration (systemd-boot → Limine)
+- AUR package management library created
+- Snapshot boot automation implemented
+- Dual-boot test infrastructure created
 
 ---
 
@@ -600,16 +773,18 @@ All changes integrated into existing installer files. Documentation created at u
 - [BTRFS - ArchWiki](https://wiki.archlinux.org/title/Btrfs)
 - [Snapper Guide - openSUSE](https://en.opensuse.org/openSUSE:Snapper_Tutorial)
 
-### Boot Integration Research
-- [systemd-boot-btrfs (AUR)](https://github.com/maslias/systemd-boot-btrfs)
-- [systemd-boot-snapshots](https://github.com/uszie/systemd-boot-snapshots)
-- [snapper_systemd_boot](https://github.com/cscutcher/snapper_systemd_boot)
-- [EndeavourOS Forum Discussion](https://forum.endeavouros.com/t/snapper-systemd-boot-integration/37451)
+### Limine Bootloader
+- [Limine Bootloader Official](https://limine-bootloader.org/)
+- [Limine GitHub](https://github.com/limine-bootloader/limine)
+- [limine-mkinitcpio-hook (AUR)](https://aur.archlinux.org/packages/limine-mkinitcpio-hook)
+- [limine-snapper-sync (AUR)](https://aur.archlinux.org/packages/limine-snapper-sync)
+- [omarchy GitHub](https://github.com/winterberryice/omarchy) - Implementation inspiration
 
 ### Related Tools
-- [grub-btrfs](https://github.com/Antynea/grub-btrfs) - GRUB snapshot integration (for comparison)
-- [snap-pac](https://github.com/wesbarnett/snap-pac) - Pacman hooks for snapper
+- [grub-btrfs](https://github.com/Antynea/grub-btrfs) - GRUB snapshot integration (alternative to Limine)
+- [snap-pac](https://github.com/wesbarnett/snap-pac) - Pacman hooks for snapper (considered but not used)
 - [snapper-rollback](https://github.com/jrabinow/snapper-rollback) - Alternative rollback tool
+- [yay](https://github.com/Jguer/yay) - AUR helper used in this implementation
 
 ---
 
