@@ -229,6 +229,16 @@ EOF
             warn "limine-update failed - boot menu may not include snapshots"
         fi
 
+        # Add btrfs-overlayfs hook to mkinitcpio.conf (now that the hook is installed)
+        info "Adding btrfs-overlayfs hook to mkinitcpio..."
+        if grep -q "encrypt" /etc/mkinitcpio.conf; then
+            # LUKS encrypted system
+            sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)/' /etc/mkinitcpio.conf
+        else
+            # Non-encrypted system
+            sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck btrfs-overlayfs)/' /etc/mkinitcpio.conf
+        fi
+
         # Rebuild initramfs with limine hooks
         info "Rebuilding initramfs with Limine hooks..."
         mkinitcpio -P
