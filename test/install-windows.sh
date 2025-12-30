@@ -58,8 +58,8 @@ qemu-system-x86_64 \
   -smp 2 \
   -drive if=pflash,format=raw,readonly=on,file="$OVMF_PATH" \
   -drive file="$DISK_NAME",format=qcow2,if=virtio \
-  -cdrom "$WINDOWS_ISO" \
-  -boot d \
+  -drive file="$WINDOWS_ISO",index=2,media=cdrom,readonly=on \
+  -boot order=d,menu=on \
   -vga virtio \
   -display sdl \
   -device usb-ehci \
