@@ -35,29 +35,49 @@ detect_ovmf
 
 echo "🐧 Testing Linux installer on dual-boot disk..."
 echo ""
-echo "Test scenarios:"
-echo "  1. Existing partition mode (select /dev/vda3)"
-echo "  2. Free space mode (if you didn't use all space)"
+echo "==================================================================="
+echo "SSH INTO QEMU (much easier than GUI!):"
+echo "==================================================================="
 echo ""
-echo "Expected behavior:"
-echo "  ✅ Detects Windows"
-echo "  ✅ Warns about dual-boot"
-echo "  ✅ Reuses existing 2GB EFI partition"
-echo "  ✅ LUKS encryption works"
+echo "After QEMU boots, in the QEMU window run:"
+echo "  passwd           # Set root password (e.g. 'root')"
+echo "  systemctl start sshd"
+echo ""
+echo "Then from your host terminal, SSH in:"
+echo "  ssh -p 2222 root@localhost"
+echo ""
+echo "Now you can copy/paste normally in your terminal!"
+echo "==================================================================="
+echo ""
+echo "INSTALLATION COMMANDS (run via SSH):"
+echo "-------------------------------------------------------------------"
+echo "git clone https://github.com/winterberryice/arch.git"
+echo "cd arch"
+echo "git checkout claude/snapper-snapshot-automation-IAVhp"
+echo "sudo ./install.sh"
+echo ""
+echo "During installation:"
+echo "  - Select /dev/vda3 (28GB Linux partition)"
+echo "  - EFI should auto-detect /dev/vda1"
+echo "  - Test with or without LUKS encryption"
+echo "==================================================================="
 echo ""
 read -p "Press Enter to boot Arch live ISO..."
 
 qemu-system-x86_64 \
   -enable-kvm \
-  -m 4G \
   -cpu host \
-  -smp 2 \
+  -smp 4 \
+  -m 8G \
   -drive if=pflash,format=raw,readonly=on,file="$OVMF_PATH" \
   -drive file="$DISK_NAME",format=qcow2,if=virtio \
   -cdrom "$ARCH_ISO" \
   -boot d \
-  -vga virtio \
-  -display sdl
+  -device virtio-vga-gl \
+  -display gtk,gl=on \
+  -device virtio-net-pci,netdev=net0 \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -monitor stdio
 
 echo ""
 echo "✅ Test complete!"
