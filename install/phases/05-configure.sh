@@ -56,14 +56,16 @@ if [[ "$HAS_NVIDIA" == "true" ]]; then
     sed -i 's/^MODULES=.*/MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)/' /etc/mkinitcpio.conf
 fi
 
-# Update hooks (add encrypt hook if encryption is enabled)
+# Update hooks (add encrypt hook if needed, btrfs-overlayfs will be added in Phase 07)
 if [[ "$ENABLE_ENCRYPTION" == "true" ]]; then
     info "Adding encrypt hook for LUKS..."
     # Hooks order: base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck
     # keyboard/keymap MUST come before encrypt (to type password)
     # encrypt MUST come before filesystems (to unlock before mount)
+    # Note: btrfs-overlayfs will be added later in Phase 07 after installing limine-mkinitcpio-hook
     sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck)/' /etc/mkinitcpio.conf
 else
+    info "Using default hooks (btrfs-overlayfs will be added in Phase 07)..."
     sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)/' /etc/mkinitcpio.conf
 fi
 

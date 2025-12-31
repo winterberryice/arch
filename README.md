@@ -61,9 +61,11 @@ Users can override system defaults. Packages rarely touch /etc/xdg/ → minimal 
 **Phase 0: COMPLETE ✅** - Automated installer tested and working in QEMU
 **Phase 1: COMPLETE ✅** - Interactive configuration and real hardware safety
 **Phase 2: COMPLETE ✅** - Partition-level installation and LUKS encryption
+**Phase 3: COMPLETE ✅** - Automatic snapshot configuration with Snapper
 
 See [`docs/PHASE-0-COMPLETE.md`](docs/PHASE-0-COMPLETE.md) for Phase 0 summary and results.
 See [`PHASE-2-COMPLETE.md`](PHASE-2-COMPLETE.md) for Phase 2 implementation details.
+See [`PHASE-3-COMPLETE.md`](PHASE-3-COMPLETE.md) for Phase 3 snapshot configuration.
 
 ## Phase 0 - MVP Installer (✅ COMPLETE)
 
@@ -126,14 +128,47 @@ See [`PHASE-2-COMPLETE.md`](PHASE-2-COMPLETE.md) for Phase 2 implementation deta
 
 **Known Limitations:**
 - /boot random seed warning (unavoidable on EFI/FAT32 systems)
-- Locale/keyboard selection deferred to Phase 3
+- Locale/keyboard selection deferred to Phase 4
 
-**Deferred to Phase 3:**
+## Phase 3 - Automatic Snapshot Configuration (✅ COMPLETE)
+
+**Goal:** Implement automatic BTRFS snapshot management with Snapper
+**Status:** Complete and ready for testing (2025-12-28)
+
+**Achieved:**
+- ✅ **Automatic Snapshots**:
+  - Hourly timeline snapshots (5 hourly, 7 daily, 4 weekly, 3 monthly)
+  - Pre/post snapshots for every pacman operation (snap-pac)
+  - Automatic cleanup with configurable retention policies
+  - Zero-configuration user experience
+- ✅ **Professional Setup**:
+  - Snapper configured for root filesystem
+  - Integration with existing @snapshots subvolume
+  - LUKS encryption compatibility
+  - Systemd timer automation
+- ✅ **User Documentation**:
+  - Comprehensive snapshot guide (~/SNAPSHOTS_GUIDE.txt)
+  - Three rollback methods documented
+  - Manual recovery procedures
+  - Important limitations explained
+- ✅ **Boot Integration Research**:
+  - systemd-boot limitations identified and documented
+  - Manual recovery prioritized over experimental automation
+  - Optional AUR package installation documented
+
+**Key Features:**
+- Automatic protection without user intervention
+- Rollback capability after bad updates
+- Manual snapshot creation support
+- Comprehensive recovery documentation
+
+**Deferred to Phase 4:**
 - ⏳ Locale selection (currently defaults to en_US.UTF-8)
 - ⏳ Keyboard layout selection (currently defaults to US)
 - ⏳ Custom partition sizes
 - ⏳ LUKS header backup automation
-- ⏳ Snapshot configuration
+- ⏳ Home directory snapshots (optional)
+- ⏳ Custom snapshot schedules
 
 **Getting Started:**
 - [`install/README.md`](install/README.md) - Installation instructions
