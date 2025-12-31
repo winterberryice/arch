@@ -124,29 +124,32 @@ EOF"
 configure_snapper() {
     log_info "Configuring Snapper..."
 
-    # Create snapper config for root
+    # Create snapper configs for root and home (like omarchy)
     chroot_run "snapper -c root create-config / 2>/dev/null || true"
+    chroot_run "snapper -c home create-config /home 2>/dev/null || true"
 
     # Configure snapper settings (like omarchy)
     chroot_run "
-        if [ -f /etc/snapper/configs/root ]; then
-            # Disable timeline snapshots (manual/pacman only)
-            sed -i 's/^TIMELINE_CREATE=\"yes\"/TIMELINE_CREATE=\"no\"/' /etc/snapper/configs/root
+        for config in root home; do
+            if [ -f /etc/snapper/configs/\$config ]; then
+                # Disable timeline snapshots (manual/pacman only)
+                sed -i 's/^TIMELINE_CREATE=\"yes\"/TIMELINE_CREATE=\"no\"/' /etc/snapper/configs/\$config
 
-            # Limit number of snapshots
-            sed -i 's/^NUMBER_LIMIT=\"50\"/NUMBER_LIMIT=\"5\"/' /etc/snapper/configs/root
-            sed -i 's/^NUMBER_LIMIT_IMPORTANT=\"10\"/NUMBER_LIMIT_IMPORTANT=\"5\"/' /etc/snapper/configs/root
+                # Limit number of snapshots
+                sed -i 's/^NUMBER_LIMIT=\"50\"/NUMBER_LIMIT=\"5\"/' /etc/snapper/configs/\$config
+                sed -i 's/^NUMBER_LIMIT_IMPORTANT=\"10\"/NUMBER_LIMIT_IMPORTANT=\"5\"/' /etc/snapper/configs/\$config
 
-            # Space limits
-            sed -i 's/^SPACE_LIMIT=\"0.5\"/SPACE_LIMIT=\"0.3\"/' /etc/snapper/configs/root
-            sed -i 's/^FREE_LIMIT=\"0.2\"/FREE_LIMIT=\"0.3\"/' /etc/snapper/configs/root
-        fi
+                # Space limits
+                sed -i 's/^SPACE_LIMIT=\"0.5\"/SPACE_LIMIT=\"0.3\"/' /etc/snapper/configs/\$config
+                sed -i 's/^FREE_LIMIT=\"0.2\"/FREE_LIMIT=\"0.3\"/' /etc/snapper/configs/\$config
+            fi
+        done
     "
 
     # Enable btrfs quota for space-aware cleanup
     chroot_run "btrfs quota enable / 2>/dev/null || true"
 
-    log_success "Snapper configured"
+    log_success "Snapper configured (root + home)"
 }
 
 # --- AUR PACKAGES ---
@@ -275,9 +278,10 @@ configure_locale() {
 }
 
 create_initial_snapshot() {
-    log_info "Creating initial snapshot..."
+    log_info "Creating initial snapshots..."
     chroot_run "snapper -c root create --description 'Fresh Install'" 2>/dev/null || true
-    log_success "Initial snapshot created"
+    chroot_run "snapper -c home create --description 'Fresh Install'" 2>/dev/null || true
+    log_success "Initial snapshots created (root + home)"
 }
 
 # --- MAIN POST-INSTALL FLOW ---
