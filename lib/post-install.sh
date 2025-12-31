@@ -162,9 +162,9 @@ install_aur_helper() {
 
         # Build yay as user
         cd /tmp
-        sudo -u $USERNAME git clone https://aur.archlinux.org/yay.git
+        sudo -u '$USERNAME' git clone https://aur.archlinux.org/yay.git
         cd yay
-        sudo -u $USERNAME makepkg -si --noconfirm
+        sudo -u '$USERNAME' makepkg -si --noconfirm
 
         # Cleanup
         rm -rf /tmp/yay
@@ -193,7 +193,7 @@ install_limine_snapper_packages() {
 
         chroot_run "
             echo '$USERNAME ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/temp-build
-            sudo -u $USERNAME yay -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook
+            sudo -u '$USERNAME' yay -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook
             rm -f /etc/sudoers.d/temp-build
         " >> "$LOG_FILE" 2>&1 || {
             log_warn "Failed to install Limine-Snapper packages"

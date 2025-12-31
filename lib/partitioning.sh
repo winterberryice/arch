@@ -35,7 +35,7 @@ create_efi_partition() {
     sgdisk -n "${part_num}:0:+2G" -t "${part_num}:ef00" -c "${part_num}:EFI" "$disk" >> "$LOG_FILE" 2>&1
 
     partprobe "$disk"
-    sleep 2
+    udevadm settle --timeout=10 || sleep 2
 
     local efi_part
     efi_part=$(get_partition_path "$disk" "$part_num")
@@ -146,7 +146,7 @@ partition_wipe_disk() {
     log_info "Creating main partition..."
     sgdisk -n 2:0:0 -t 2:8300 -c 2:"Linux" "$disk" >> "$LOG_FILE" 2>&1
     partprobe "$disk"
-    sleep 2
+    udevadm settle --timeout=10 || sleep 2
 
     LUKS_PARTITION=$(get_partition_path "$disk" 2)
 }
@@ -175,7 +175,7 @@ partition_free_space() {
 
         sgdisk -n "${next_num}:${start_sector}:+2G" -t "${next_num}:ef00" -c "${next_num}:EFI" "$disk" >> "$LOG_FILE" 2>&1
         partprobe "$disk"
-        sleep 2
+        udevadm settle --timeout=10 || sleep 2
 
         EFI_PARTITION=$(get_partition_path "$disk" "$next_num")
         mkfs.fat -F 32 -n EFI "$EFI_PARTITION" >> "$LOG_FILE" 2>&1
@@ -191,7 +191,7 @@ partition_free_space() {
     log_info "Creating Linux partition in free space..."
     sgdisk -n "${next_num}:${start_sector}:0" -t "${next_num}:8300" -c "${next_num}:Linux" "$disk" >> "$LOG_FILE" 2>&1
     partprobe "$disk"
-    sleep 2
+    udevadm settle --timeout=10 || sleep 2
 
     LUKS_PARTITION=$(get_partition_path "$disk" "$next_num")
 }

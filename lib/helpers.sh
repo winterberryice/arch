@@ -133,6 +133,13 @@ show_cursor() {
     printf "\033[?25h"
 }
 
+cleanup_mounts() {
+    # Best-effort cleanup of mounts and LUKS
+    umount -R "${MOUNT_POINT:-/mnt/archinstall}" 2>/dev/null || true
+    umount -R /mnt 2>/dev/null || true
+    cryptsetup close cryptroot 2>/dev/null || true
+}
+
 catch_errors() {
     if [[ $ERROR_HANDLING == true ]]; then
         return
@@ -141,6 +148,9 @@ catch_errors() {
 
     local exit_code=$?
     show_cursor
+
+    # Cleanup mounts
+    cleanup_mounts
 
     clear_screen
     show_logo

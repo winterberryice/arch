@@ -75,10 +75,18 @@ detect_windows() {
     local efi_part
     efi_part=$(detect_efi_partition "$disk") || return 1
 
-    # Try to detect Windows boot files (without mounting)
-    if strings "$efi_part" 2>/dev/null | grep -qi "Microsoft\|Windows\|bootmgr"; then
-        return 0
+    # Mount EFI temporarily to check for Windows boot files
+    local tmp_mount="/tmp/efi-check-$$"
+    mkdir -p "$tmp_mount"
+    if mount -o ro "$efi_part" "$tmp_mount" 2>/dev/null; then
+        if [[ -d "$tmp_mount/EFI/Microsoft" ]] || [[ -f "$tmp_mount/EFI/Microsoft/Boot/bootmgfw.efi" ]]; then
+            umount "$tmp_mount" 2>/dev/null
+            rmdir "$tmp_mount" 2>/dev/null
+            return 0
+        fi
+        umount "$tmp_mount" 2>/dev/null
     fi
+    rmdir "$tmp_mount" 2>/dev/null
 
     return 1
 }
