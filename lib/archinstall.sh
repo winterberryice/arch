@@ -54,11 +54,7 @@ generate_user_config() {
         "cosmic",
         "cosmic-greeter",
         "xdg-desktop-portal-cosmic",
-        "power-profiles-daemon",
-        "pipewire",
-        "pipewire-pulse",
-        "pipewire-alsa",
-        "wireplumber"
+        "power-profiles-daemon"
     ],
     "parallel_downloads": 8,
     "profile_config": {
