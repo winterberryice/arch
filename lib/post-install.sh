@@ -1,6 +1,12 @@
 #!/bin/bash
 # lib/post-install.sh - Post-installation setup
-# Configures Limine-Snapper integration, mkinitcpio, COSMIC
+# Based on omarchy's install/login/limine-snapper.sh
+#
+# This runs AFTER archinstall, in chroot, to configure:
+# - mkinitcpio with proper hooks for LUKS + BTRFS
+# - Limine bootloader with snapshot support
+# - Snapper for BTRFS snapshots
+# - COSMIC desktop greeter
 
 # --- CHROOT HELPER ---
 
@@ -8,15 +14,50 @@ chroot_run() {
     arch-chroot "$MOUNT_POINT" /bin/bash -c "$1"
 }
 
+# --- MKINITCPIO OPTIMIZATION ---
+# Like omarchy, disable hooks during install to avoid multiple rebuilds
+
+disable_mkinitcpio_hooks() {
+    log_info "Temporarily disabling mkinitcpio hooks..."
+
+    chroot_run "
+        if [ -f /usr/share/libalpm/hooks/90-mkinitcpio-install.hook ]; then
+            mv /usr/share/libalpm/hooks/90-mkinitcpio-install.hook \
+               /usr/share/libalpm/hooks/90-mkinitcpio-install.hook.disabled
+        fi
+        if [ -f /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook ]; then
+            mv /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook \
+               /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook.disabled
+        fi
+    "
+}
+
+enable_mkinitcpio_hooks() {
+    log_info "Re-enabling mkinitcpio hooks..."
+
+    chroot_run "
+        if [ -f /usr/share/libalpm/hooks/90-mkinitcpio-install.hook.disabled ]; then
+            mv /usr/share/libalpm/hooks/90-mkinitcpio-install.hook.disabled \
+               /usr/share/libalpm/hooks/90-mkinitcpio-install.hook
+        fi
+        if [ -f /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook.disabled ]; then
+            mv /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook.disabled \
+               /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook
+        fi
+    "
+}
+
 # --- MKINITCPIO CONFIGURATION ---
 
 configure_mkinitcpio() {
     log_info "Configuring mkinitcpio hooks..."
 
-    # Create hook configuration
+    # Create hook configuration for LUKS + BTRFS
+    # Note: btrfs-overlayfs is added later if limine-mkinitcpio-hook is installed
     chroot_run "cat > /etc/mkinitcpio.conf.d/arch-cosmic.conf << 'EOF'
 # Arch COSMIC Installer - mkinitcpio configuration
-HOOKS=(base udev keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)
+# Hooks for LUKS encrypted BTRFS root
+HOOKS=(base udev keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck)
 EOF"
 
     log_success "mkinitcpio configured"
@@ -27,7 +68,7 @@ EOF"
 configure_limine() {
     log_info "Configuring Limine bootloader..."
 
-    # Get kernel cmdline
+    # Get LUKS partition UUID
     local luks_uuid
     luks_uuid=$(blkid -s UUID -o value "$LUKS_PARTITION")
 
@@ -83,43 +124,95 @@ EOF"
 configure_snapper() {
     log_info "Configuring Snapper..."
 
-    # Create snapper configs for root and home
-    chroot_run "snapper -c root create-config /" 2>/dev/null || true
-    chroot_run "snapper -c home create-config /home" 2>/dev/null || true
+    # Create snapper config for root
+    chroot_run "snapper -c root create-config / 2>/dev/null || true"
 
     # Configure snapper settings (like omarchy)
     chroot_run "
-        # Disable timeline snapshots (manual/pacman only)
-        sed -i 's/^TIMELINE_CREATE=\"yes\"/TIMELINE_CREATE=\"no\"/' /etc/snapper/configs/root /etc/snapper/configs/home 2>/dev/null || true
+        if [ -f /etc/snapper/configs/root ]; then
+            # Disable timeline snapshots (manual/pacman only)
+            sed -i 's/^TIMELINE_CREATE=\"yes\"/TIMELINE_CREATE=\"no\"/' /etc/snapper/configs/root
 
-        # Limit number of snapshots
-        sed -i 's/^NUMBER_LIMIT=\"50\"/NUMBER_LIMIT=\"5\"/' /etc/snapper/configs/root /etc/snapper/configs/home 2>/dev/null || true
-        sed -i 's/^NUMBER_LIMIT_IMPORTANT=\"10\"/NUMBER_LIMIT_IMPORTANT=\"5\"/' /etc/snapper/configs/root /etc/snapper/configs/home 2>/dev/null || true
+            # Limit number of snapshots
+            sed -i 's/^NUMBER_LIMIT=\"50\"/NUMBER_LIMIT=\"5\"/' /etc/snapper/configs/root
+            sed -i 's/^NUMBER_LIMIT_IMPORTANT=\"10\"/NUMBER_LIMIT_IMPORTANT=\"5\"/' /etc/snapper/configs/root
 
-        # Space limits
-        sed -i 's/^SPACE_LIMIT=\"0.5\"/SPACE_LIMIT=\"0.3\"/' /etc/snapper/configs/root /etc/snapper/configs/home 2>/dev/null || true
-        sed -i 's/^FREE_LIMIT=\"0.2\"/FREE_LIMIT=\"0.3\"/' /etc/snapper/configs/root /etc/snapper/configs/home 2>/dev/null || true
+            # Space limits
+            sed -i 's/^SPACE_LIMIT=\"0.5\"/SPACE_LIMIT=\"0.3\"/' /etc/snapper/configs/root
+            sed -i 's/^FREE_LIMIT=\"0.2\"/FREE_LIMIT=\"0.3\"/' /etc/snapper/configs/root
+        fi
     "
 
     # Enable btrfs quota for space-aware cleanup
-    chroot_run "btrfs quota enable /" 2>/dev/null || true
+    chroot_run "btrfs quota enable / 2>/dev/null || true"
 
     log_success "Snapper configured"
 }
 
-# --- LIMINE-SNAPPER INTEGRATION ---
+# --- AUR PACKAGES ---
+# limine-snapper-sync and limine-mkinitcpio-hook are AUR packages
 
-install_limine_snapper() {
-    log_info "Installing Limine-Snapper integration packages..."
+install_aur_helper() {
+    log_info "Installing yay AUR helper..."
 
-    # These packages enable booting from snapshots
-    # Note: These are in the official repos or AUR
-    chroot_run "pacman -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook 2>/dev/null || true"
+    chroot_run "
+        # Temporary sudo access for build
+        echo '$USERNAME ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/temp-build
+        chmod 440 /etc/sudoers.d/temp-build
+
+        # Build yay as user
+        cd /tmp
+        sudo -u $USERNAME git clone https://aur.archlinux.org/yay.git
+        cd yay
+        sudo -u $USERNAME makepkg -si --noconfirm
+
+        # Cleanup
+        rm -rf /tmp/yay
+        rm -f /etc/sudoers.d/temp-build
+    " >> "$LOG_FILE" 2>&1 || {
+        log_warn "Failed to install yay - skipping AUR packages"
+        return 1
+    }
+
+    log_success "yay installed"
+    return 0
+}
+
+install_limine_snapper_packages() {
+    log_info "Installing Limine-Snapper integration packages from AUR..."
+
+    # Check if packages exist in official repos first
+    if chroot_run "pacman -Ss limine-snapper-sync" &>/dev/null; then
+        chroot_run "pacman -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook" >> "$LOG_FILE" 2>&1
+    else
+        # Fall back to AUR
+        if ! install_aur_helper; then
+            log_warn "Skipping Limine-Snapper AUR packages"
+            return 1
+        fi
+
+        chroot_run "
+            echo '$USERNAME ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/temp-build
+            sudo -u $USERNAME yay -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook
+            rm -f /etc/sudoers.d/temp-build
+        " >> "$LOG_FILE" 2>&1 || {
+            log_warn "Failed to install Limine-Snapper packages"
+            return 1
+        }
+    fi
+
+    # Update mkinitcpio hooks to include btrfs-overlayfs
+    chroot_run "
+        if [ -f /usr/lib/initcpio/install/btrfs-overlayfs ]; then
+            sed -i 's/^HOOKS=.*/HOOKS=(base udev keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)/' /etc/mkinitcpio.conf.d/arch-cosmic.conf
+        fi
+    "
 
     # Enable the sync service
-    chroot_run "systemctl enable limine-snapper-sync.service" 2>/dev/null || true
+    chroot_run "systemctl enable limine-snapper-sync.service 2>/dev/null || true"
 
     log_success "Limine-Snapper integration installed"
+    return 0
 }
 
 # --- REBUILD AND UPDATE ---
@@ -132,53 +225,59 @@ rebuild_initramfs() {
 
 update_limine() {
     log_info "Updating Limine boot entries..."
-    chroot_run "limine-update" >> "$LOG_FILE" 2>&1 || {
-        log_warn "limine-update not available yet, running limine install..."
-        chroot_run "limine --install /boot" >> "$LOG_FILE" 2>&1 || true
-    }
+
+    # Try limine-update first (from limine-mkinitcpio-hook)
+    if chroot_run "command -v limine-update" &>/dev/null; then
+        chroot_run "limine-update" >> "$LOG_FILE" 2>&1 || true
+    fi
+
+    # Ensure Limine EFI is installed
+    chroot_run "
+        mkdir -p /boot/EFI/BOOT
+        cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/
+    " >> "$LOG_FILE" 2>&1
+
     log_success "Limine updated"
 }
 
-# --- COSMIC SPECIFIC SETUP ---
+# --- SERVICES AND FINAL SETUP ---
 
-configure_cosmic() {
-    log_info "Configuring COSMIC desktop..."
+configure_services() {
+    log_info "Enabling system services..."
 
-    # Enable required services
-    chroot_run "systemctl enable cosmic-greeter.service"
-    chroot_run "systemctl enable power-profiles-daemon.service" 2>/dev/null || true
+    chroot_run "
+        systemctl enable NetworkManager.service
+        systemctl enable cosmic-greeter.service
+        systemctl enable power-profiles-daemon.service 2>/dev/null || true
+    "
 
-    # Create user directories
-    chroot_run "mkdir -p /home/$USERNAME/.config"
-    chroot_run "chown -R $USERNAME:$USERNAME /home/$USERNAME"
-
-    log_success "COSMIC configured"
+    log_success "Services enabled"
 }
 
-# --- FINAL TOUCHES ---
+configure_locale() {
+    log_info "Configuring locale and timezone..."
 
-final_setup() {
-    log_info "Applying final configuration..."
+    chroot_run "
+        # Timezone
+        ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
+        hwclock --systohc
 
-    # Enable NetworkManager
-    chroot_run "systemctl enable NetworkManager.service"
+        # Locale
+        sed -i 's/^#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
+        locale-gen
+        echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 
-    # Set timezone
-    chroot_run "ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime"
-    chroot_run "hwclock --systohc"
+        # Keyboard
+        echo 'KEYMAP=$KEYBOARD' > /etc/vconsole.conf
+    " >> "$LOG_FILE" 2>&1
 
-    # Generate locales
-    chroot_run "sed -i 's/^#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen"
-    chroot_run "locale-gen" >> "$LOG_FILE" 2>&1
-    chroot_run "echo 'LANG=en_US.UTF-8' > /etc/locale.conf"
+    log_success "Locale configured"
+}
 
-    # Set keyboard
-    chroot_run "echo 'KEYMAP=$KEYBOARD' > /etc/vconsole.conf"
-
-    # Create initial snapshot
+create_initial_snapshot() {
+    log_info "Creating initial snapshot..."
     chroot_run "snapper -c root create --description 'Fresh Install'" 2>/dev/null || true
-
-    log_success "Final configuration complete"
+    log_success "Initial snapshot created"
 }
 
 # --- MAIN POST-INSTALL FLOW ---
@@ -186,19 +285,26 @@ final_setup() {
 run_post_install() {
     log_step "Post-Installation Setup"
 
+    # Disable mkinitcpio hooks during package installation (speed optimization)
+    disable_mkinitcpio_hooks
+
     # Configure components
     configure_mkinitcpio
     configure_limine
     configure_snapper
-    install_limine_snapper
 
-    # Rebuild and update
+    # Install AUR packages for snapshot booting (optional, may fail)
+    install_limine_snapper_packages || true
+
+    # Re-enable hooks and rebuild
+    enable_mkinitcpio_hooks
     rebuild_initramfs
     update_limine
 
-    # COSMIC and final setup
-    configure_cosmic
-    final_setup
+    # Final configuration
+    configure_services
+    configure_locale
+    create_initial_snapshot
 
     log_success "Post-installation complete"
 }

@@ -124,7 +124,8 @@ HOOKS=(base udev keyboard autodetect microcode modconf kms keymap consolefont bl
 
 ### Testing
 - Use QEMU with OVMF for EFI testing
-- Test scripts in `old/test/` can be adapted
+- Run `./test.sh` to create disk and boot ISO
+- Run `./test.sh --boot-disk` to test installed system
 
 ### Updating Archinstall
 When archinstall updates break compatibility:
@@ -132,8 +133,48 @@ When archinstall updates break compatibility:
 2. Update lib/archinstall.sh
 3. Update pinned version in this file and install.sh
 
-### Reference Code
-- `vendor/omarchy-iso/configs/airootfs/root/configurator` - TUI example
-- `vendor/omarchy-iso/configs/airootfs/root/.automated_script.sh` - Flow example
-- `vendor/omarchy/install/login/limine-snapper.sh` - Snapper setup
-- `old/install/` - Previous partitioning implementation
+### TUI Library
+We use [gum](https://github.com/charmbracelet/gum) for all TUI interactions:
+- `gum input` - text input
+- `gum input --password` - password input
+- `gum choose` - selection menu
+- `gum confirm` - yes/no confirmation
+- `gum spin` - spinner animation
+- `gum style` - styled text output
+
+## Reference Sources
+
+### Our Code vs Omarchy References
+
+| Our File | Based On | Purpose |
+|----------|----------|---------|
+| `lib/helpers.sh` | `omarchy/install/helpers/*.sh` | Logging, errors, TUI |
+| `lib/configurator.sh` | `omarchy-iso/.../configurator` | User input TUI |
+| `lib/disk.sh` | Custom + old implementation | Dual-boot disk detection |
+| `lib/partitioning.sh` | Custom + old implementation | LUKS, BTRFS, mounting |
+| `lib/archinstall.sh` | `omarchy-iso/.../.automated_script.sh` | JSON generation, archinstall |
+| `lib/post-install.sh` | `omarchy/install/login/limine-snapper.sh` | Limine-Snapper setup |
+
+### Key Reference Files
+```
+vendor/omarchy-iso/
+├── configs/airootfs/root/
+│   ├── configurator              # TUI for user input (gum-based)
+│   └── .automated_script.sh      # archinstall invocation flow
+
+vendor/omarchy/
+├── install/
+│   ├── helpers/                  # Presentation, errors, logging
+│   ├── preflight/
+│   │   └── disable-mkinitcpio.sh # Speed optimization (we copy this)
+│   └── login/
+│       └── limine-snapper.sh     # Snapper + Limine config (main reference)
+
+old/
+└── install/                      # Previous partitioning implementation
+```
+
+### mkinitcpio Optimization
+Like omarchy, we disable mkinitcpio hooks during package installation to avoid
+rebuilding initramfs multiple times. Hooks are re-enabled and initramfs is
+rebuilt once at the end. See `lib/post-install.sh:disable_mkinitcpio_hooks()`

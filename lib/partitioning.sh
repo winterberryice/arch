@@ -155,9 +155,10 @@ partition_wipe_disk() {
 partition_free_space() {
     local disk="$SELECTED_DISK"
 
-    # Find the end of the last partition
+    # Find the end of the last partition (use awk instead of bc for portability)
     local last_end
-    last_end=$(sfdisk -d "$disk" 2>/dev/null | grep "^/dev" | tail -1 | sed 's/.*start=\s*\([0-9]*\).*size=\s*\([0-9]*\).*/\1+\2/' | bc)
+    last_end=$(sfdisk -d "$disk" 2>/dev/null | grep "^/dev" | tail -1 | \
+        awk -F'[=, ]+' '{for(i=1;i<=NF;i++){if($i=="start")s=$(i+1);if($i=="size")sz=$(i+1)}}END{print s+sz}')
     last_end=${last_end:-2048}
 
     # Start new partition after last one (align to 1MB)

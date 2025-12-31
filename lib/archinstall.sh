@@ -16,6 +16,8 @@ generate_user_config() {
     local luks_uuid
     luks_uuid=$(blkid -s UUID -o value "$LUKS_PARTITION")
 
+    # Note: For pre_mounted_config, we use minimal disk_config
+    # archinstall will detect what's mounted at mountpoint
     cat > "$config_file" <<EOF
 {
     "archinstall-language": "English",
@@ -23,14 +25,9 @@ generate_user_config() {
         "audio": "pipewire"
     },
     "bootloader": "Limine",
-    "config_type": "pre_mounted_config",
     "disk_config": {
         "config_type": "pre_mounted_config",
         "mountpoint": "$MOUNT_POINT"
-    },
-    "disk_encryption": {
-        "encryption_type": "luks",
-        "partitions": ["$LUKS_PARTITION"]
     },
     "hostname": "$HOSTNAME",
     "kernels": ["linux"],
@@ -57,7 +54,11 @@ generate_user_config() {
         "cosmic",
         "cosmic-greeter",
         "xdg-desktop-portal-cosmic",
-        "power-profiles-daemon"
+        "power-profiles-daemon",
+        "pipewire",
+        "pipewire-pulse",
+        "pipewire-alsa",
+        "wireplumber"
     ],
     "parallel_downloads": 8,
     "profile_config": {
@@ -65,10 +66,6 @@ generate_user_config() {
         "greeter": null,
         "profile": null
     },
-    "services": [
-        "NetworkManager",
-        "cosmic-greeter"
-    ],
     "swap": false,
     "timezone": "$TIMEZONE",
     "version": "$ARCHINSTALL_VERSION"
