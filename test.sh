@@ -54,7 +54,11 @@ check_prerequisites() {
 
     if [[ ! -f "$OVMF_CODE" ]]; then
         # Try alternative paths
-        for path in /usr/share/edk2-ovmf/x64/OVMF_CODE.fd /usr/share/edk2/ovmf/OVMF_CODE.fd; do
+        for path in \
+            /usr/share/edk2/x64/OVMF_CODE.4m.fd \
+            /usr/share/edk2-ovmf/x64/OVMF_CODE.fd \
+            /usr/share/edk2/ovmf/OVMF_CODE.fd \
+            /usr/share/OVMF/x64/OVMF_CODE.fd; do
             if [[ -f "$path" ]]; then
                 OVMF_CODE="$path"
                 OVMF_VARS="${path/CODE/VARS}"
