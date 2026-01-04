@@ -4,7 +4,7 @@
 # Prerequisites:
 #   - qemu-system-x86_64
 #   - OVMF (UEFI firmware)
-#   - Arch Linux ISO
+#   - Arch Linux ISO (auto-downloaded if missing)
 #
 # Usage:
 #   ./test.sh              # Create disk and boot ISO
@@ -13,13 +13,18 @@
 
 set -euo pipefail
 
+# Script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEST_DIR="$SCRIPT_DIR/test"
+
 # Configuration
-DISK_FILE="test-disk.qcow2"
+DISK_FILE="$TEST_DIR/test-disk.qcow2"
 DISK_SIZE="60G"
-ISO_PATH="${ARCH_ISO:-archlinux.iso}"
+ISO_PATH="${ARCH_ISO:-$TEST_DIR/archlinux-x86_64.iso}"
+ISO_URL="https://mirror.rackspace.com/archlinux/iso/latest/archlinux-x86_64.iso"
 OVMF_CODE="/usr/share/OVMF/OVMF_CODE.fd"
 OVMF_VARS="/usr/share/OVMF/OVMF_VARS.fd"
-OVMF_VARS_COPY="test-ovmf-vars.fd"
+OVMF_VARS_COPY="$TEST_DIR/test-ovmf-vars.fd"
 SSH_PORT=2222
 VNC_PORT=5900
 RAM="4G"
@@ -34,6 +39,11 @@ NC='\033[0m'
 info() { echo -e "${GREEN}[INFO]${NC} $*"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+
+# Ensure test directory exists
+ensure_test_dir() {
+    mkdir -p "$TEST_DIR"
+}
 
 # Check prerequisites
 check_prerequisites() {
@@ -55,6 +65,28 @@ check_prerequisites() {
     fi
 
     info "Prerequisites OK"
+}
+
+# Download Arch ISO if not present
+download_iso() {
+    if [[ -f "$ISO_PATH" ]]; then
+        return 0
+    fi
+
+    info "Arch ISO not found at: $ISO_PATH"
+    info "Downloading from: $ISO_URL"
+    echo
+
+    if command -v curl &>/dev/null; then
+        curl -L -o "$ISO_PATH" "$ISO_URL"
+    elif command -v wget &>/dev/null; then
+        wget -O "$ISO_PATH" "$ISO_URL"
+    else
+        error "Neither curl nor wget found. Please install one or download manually:
+  $ISO_URL"
+    fi
+
+    info "ISO downloaded successfully"
 }
 
 # Create virtual disk
@@ -84,12 +116,6 @@ create_ovmf_vars() {
 
 # Boot from ISO (installation mode)
 boot_iso() {
-    if [[ ! -f "$ISO_PATH" ]]; then
-        error "Arch ISO not found: $ISO_PATH
-Set ARCH_ISO environment variable or download to current directory:
-  wget https://mirror.rackspace.com/archlinux/iso/latest/archlinux-x86_64.iso -O archlinux.iso"
-    fi
-
     info "Booting from ISO: $ISO_PATH"
     info "SSH will be available on port $SSH_PORT after boot"
     info "VNC available on port $VNC_PORT"
@@ -147,7 +173,8 @@ boot_disk() {
 clean() {
     info "Cleaning up test files..."
     rm -f "$DISK_FILE" "$OVMF_VARS_COPY"
-    info "Done"
+    # Note: ISO is kept to avoid re-downloading
+    info "Done (ISO kept at $ISO_PATH)"
 }
 
 # Show help
@@ -158,16 +185,20 @@ Arch COSMIC Installer - QEMU Test Script
 Usage:
   ./test.sh              Create disk and boot from ISO (installation mode)
   ./test.sh --boot-disk  Boot from installed disk
-  ./test.sh --clean      Remove test files
+  ./test.sh --clean      Remove test files (keeps ISO)
   ./test.sh --help       Show this help
 
+Files:
+  test/archlinux-x86_64.iso   Arch ISO (auto-downloaded if missing)
+  test/test-disk.qcow2        Virtual disk image
+  test/test-ovmf-vars.fd      UEFI variables
+
 Environment variables:
-  ARCH_ISO    Path to Arch Linux ISO (default: archlinux.iso)
+  ARCH_ISO    Override ISO path (default: test/archlinux-x86_64.iso)
 
 Prerequisites:
   - qemu-system-x86_64
   - OVMF/edk2-ovmf (UEFI firmware)
-  - Arch Linux ISO
 
 After booting the ISO:
   1. Set root password: passwd
@@ -183,6 +214,7 @@ EOF
 main() {
     case "${1:-}" in
         --boot-disk)
+            ensure_test_dir
             check_prerequisites
             create_ovmf_vars
             boot_disk
@@ -194,7 +226,9 @@ main() {
             show_help
             ;;
         *)
+            ensure_test_dir
             check_prerequisites
+            download_iso
             create_disk
             create_ovmf_vars
             boot_iso
