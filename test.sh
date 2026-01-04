@@ -26,9 +26,8 @@ OVMF_CODE="/usr/share/OVMF/OVMF_CODE.fd"
 OVMF_VARS="/usr/share/OVMF/OVMF_VARS.fd"
 OVMF_VARS_COPY="$TEST_DIR/test-ovmf-vars.fd"
 SSH_PORT=2222
-VNC_PORT=5900
-RAM="4G"
-CPUS="2"
+RAM="8G"
+CPUS="4"
 
 # Colors
 RED='\033[0;31m'
@@ -122,7 +121,6 @@ create_ovmf_vars() {
 boot_iso() {
     info "Booting from ISO: $ISO_PATH"
     info "SSH will be available on port $SSH_PORT after boot"
-    info "VNC available on port $VNC_PORT"
     echo
     info "To connect via SSH (after enabling in live environment):"
     echo "  ssh -p $SSH_PORT root@localhost"
@@ -134,6 +132,7 @@ boot_iso() {
 
     qemu-system-x86_64 \
         -enable-kvm \
+        -cpu host \
         -m "$RAM" \
         -smp "$CPUS" \
         -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
@@ -141,10 +140,11 @@ boot_iso() {
         -drive file="$DISK_FILE",format=qcow2,if=virtio \
         -cdrom "$ISO_PATH" \
         -boot d \
-        -netdev user,id=net0,hostfwd=tcp::${SSH_PORT}-:22 \
         -device virtio-net-pci,netdev=net0 \
-        -vga virtio \
-        -display sdl \
+        -netdev user,id=net0,hostfwd=tcp::${SSH_PORT}-:22 \
+        -device virtio-vga-gl \
+        -display gtk,gl=on \
+        -monitor stdio \
         -name "Arch COSMIC Installer Test"
 }
 
@@ -160,16 +160,18 @@ boot_disk() {
 
     qemu-system-x86_64 \
         -enable-kvm \
+        -cpu host \
         -m "$RAM" \
         -smp "$CPUS" \
         -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
         -drive if=pflash,format=raw,file="$OVMF_VARS_COPY" \
         -drive file="$DISK_FILE",format=qcow2,if=virtio \
         -boot c \
-        -netdev user,id=net0,hostfwd=tcp::${SSH_PORT}-:22 \
         -device virtio-net-pci,netdev=net0 \
-        -vga virtio \
-        -display sdl \
+        -netdev user,id=net0,hostfwd=tcp::${SSH_PORT}-:22 \
+        -device virtio-vga-gl \
+        -display gtk,gl=on \
+        -monitor stdio \
         -name "Arch COSMIC Test"
 }
 
