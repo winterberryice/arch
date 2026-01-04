@@ -153,25 +153,41 @@ catch_errors() {
     cleanup_mounts
 
     clear_screen
-    show_logo
 
-    gum style --foreground 1 --padding "1 0" "Installation stopped!"
-    echo
-    gum style "Exit code: $exit_code"
-    gum style "Log file: $LOG_FILE"
-    echo
+    # Check if gum is available, fall back to echo if not
+    if command -v gum &>/dev/null; then
+        show_logo
 
-    # Show last few log lines
-    if [[ -f "$LOG_FILE" ]]; then
-        gum style --foreground 8 "Last log entries:"
-        tail -10 "$LOG_FILE" | while read -r line; do
-            gum style --foreground 8 "  $line"
-        done
+        gum style --foreground 1 --padding "1 0" "Installation stopped!"
+        echo
+        gum style "Exit code: $exit_code"
+        gum style "Log file: $LOG_FILE"
+        echo
+
+        # Show last few log lines
+        if [[ -f "$LOG_FILE" ]]; then
+            gum style --foreground 8 "Last log entries:"
+            tail -10 "$LOG_FILE" | while read -r line; do
+                gum style --foreground 8 "  $line"
+            done
+        fi
+
+        echo
+        gum style "Please report issues at:"
+        gum style --foreground 4 "https://github.com/winterberryice/arch/issues"
+    else
+        echo "=== Installation stopped! ==="
+        echo "Exit code: $exit_code"
+        echo "Log file: $LOG_FILE"
+        echo
+        if [[ -f "$LOG_FILE" ]]; then
+            echo "Last log entries:"
+            tail -10 "$LOG_FILE"
+        fi
+        echo
+        echo "Please report issues at:"
+        echo "https://github.com/winterberryice/arch/issues"
     fi
-
-    echo
-    gum style "Please report issues at:"
-    gum style --foreground 4 "https://github.com/winterberryice/arch/issues"
 }
 
 trap catch_errors ERR INT TERM

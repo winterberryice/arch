@@ -50,6 +50,13 @@ main() {
 }
 
 preflight_checks() {
+    # Install required tools FIRST (before using gum for logging)
+    echo ":: Installing required tools..."
+    pacman -Sy --noconfirm --needed gum jq >/dev/null 2>&1 || {
+        echo "ERROR: Failed to install required tools (gum, jq)"
+        exit 1
+    }
+
     log_step "Running preflight checks..."
 
     # Must be root
@@ -71,10 +78,6 @@ preflight_checks() {
     if ! ping -c 1 -W 3 archlinux.org &>/dev/null; then
         die "No network connection. Please connect to the internet first."
     fi
-
-    # Install required tools
-    log_info "Installing required tools..."
-    pacman -Sy --noconfirm --needed gum jq &>/dev/null || true
 
     log_success "Preflight checks passed"
 }
