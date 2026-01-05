@@ -1,5 +1,7 @@
 # Arch Linux Installer (COSMIC Edition)
 
+**Status: Phase 1 (Base Installer) Complete ✅**
+
 A dual-boot capable Arch Linux installer with COSMIC desktop, LUKS encryption, and BTRFS snapshots.
 
 ## Features

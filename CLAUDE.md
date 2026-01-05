@@ -1,5 +1,22 @@
 # Arch Linux Installer (COSMIC Edition)
 
+## Project Status
+
+### ✅ Phase 1: Base Installer - **COMPLETE**
+The base system installer is fully functional and tested:
+- LUKS encryption with BTRFS subvolumes
+- Limine bootloader with snapshot support
+- COSMIC desktop environment
+- Dual-boot partitioning support
+- Snapper snapshot management
+
+### 🚧 Phase 2: Post-Install Configuration - **PLANNED**
+Next phase will add omarchy-style configuration:
+- Package installation utilities
+- System configuration scripts
+- Custom utilities and tools
+- Desktop environment customization
+
 ## Project Overview
 
 A dual-boot capable Arch Linux installer inspired by [Omarchy](https://github.com/basecamp/omarchy), but with:
@@ -48,7 +65,7 @@ A dual-boot capable Arch Linux installer inspired by [Omarchy](https://github.co
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| archinstall | 3.0.14-1 (pinned) | Base system installation |
+| archinstall | 3.0.9-1 (pinned) | Base system installation |
 | gum | latest | TUI prompts and styling |
 | limine | latest | Bootloader with snapshot support |
 | snapper | latest | BTRFS snapshot management |
@@ -178,3 +195,32 @@ old/
 Like omarchy, we disable mkinitcpio hooks during package installation to avoid
 rebuilding initramfs multiple times. Hooks are re-enabled and initramfs is
 rebuilt once at the end. See `lib/post-install.sh:disable_mkinitcpio_hooks()`
+
+## Phase 2: Post-Install Configuration (Future Work)
+
+### Goals
+Create an omarchy-style post-install configuration system that runs after the base installer.
+
+### Structure (Proposed)
+```
+config/
+├── packages/           # Package installation scripts
+│   ├── desktop.sh     # Desktop apps (browsers, editors, etc.)
+│   ├── dev.sh         # Development tools
+│   └── media.sh       # Media apps
+├── system/            # System configuration
+│   ├── tweaks.sh      # Performance/UX tweaks
+│   └── services.sh    # Enable/configure services
+└── utils/             # Custom utilities
+    └── helpers.sh     # Common functions
+```
+
+### Reference
+Look at `vendor/omarchy/install/config/` and `vendor/omarchy/install/packaging/` for examples of how omarchy structures post-install configuration.
+
+### Integration
+Post-install config should be:
+- Optional (user can skip)
+- Modular (user can select which parts to run)
+- Idempotent (safe to run multiple times)
+
