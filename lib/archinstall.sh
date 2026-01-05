@@ -2,8 +2,8 @@
 # lib/archinstall.sh - Generate archinstall JSON config and run archinstall
 # Uses pre_mounted_config mode since we handle partitioning ourselves
 
-# Pinned archinstall version
-ARCHINSTALL_VERSION="${ARCHINSTALL_VERSION:-3.0.14-1}"
+# Pinned archinstall version (matching omarchy)
+ARCHINSTALL_VERSION="${ARCHINSTALL_VERSION:-3.0.9-1}"
 
 # --- JSON GENERATION ---
 
@@ -65,7 +65,7 @@ generate_user_config() {
     },
     "swap": false,
     "timezone": "$TIMEZONE",
-    "version": "$ARCHINSTALL_VERSION"
+    "version": "3.0.9"
 }
 EOF
 
@@ -89,10 +89,10 @@ generate_user_credentials() {
     cat > "$creds_file" <<EOF
 {
     "encryption_password": $password_escaped,
-    "!root-password": $password_hash_escaped,
-    "!users": [
+    "root_enc_password": $password_hash_escaped,
+    "users": [
         {
-            "!password": $password_hash_escaped,
+            "enc_password": $password_hash_escaped,
             "groups": ["wheel"],
             "sudo": true,
             "username": $username_escaped
