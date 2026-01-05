@@ -227,7 +227,8 @@ install_limine_snapper_packages() {
 rebuild_initramfs() {
     log_info "Rebuilding initramfs..."
     echo >&2  # Add blank line for visibility
-    chroot_run "mkinitcpio -P" 2>&1 | tee -a "$LOG_FILE" >&2
+    # Answer 'y' to the limine-mkinitcpio prompt automatically
+    echo "y" | chroot_run "mkinitcpio -P" 2>&1 | tee -a "$LOG_FILE" >&2
     log_success "Initramfs rebuilt"
 }
 
@@ -305,8 +306,7 @@ run_post_install() {
     # Install AUR packages for snapshot booting (optional, may fail)
     install_limine_snapper_packages || true
 
-    # Rebuild initramfs with final configuration
-    rebuild_initramfs
+    # Update Limine (this will trigger mkinitcpio automatically via hooks)
     update_limine
 
     # Final configuration
