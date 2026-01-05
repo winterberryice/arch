@@ -226,23 +226,27 @@ install_limine_snapper_packages() {
 
 rebuild_initramfs() {
     log_info "Rebuilding initramfs..."
-    chroot_run "mkinitcpio -P" >> "$LOG_FILE" 2>&1
+    echo >&2  # Add blank line for visibility
+    chroot_run "mkinitcpio -P" 2>&1 | tee -a "$LOG_FILE" >&2
     log_success "Initramfs rebuilt"
 }
 
 update_limine() {
     log_info "Installing Limine bootloader..."
+    echo >&2
 
     # Try limine-update first (from limine-mkinitcpio-hook)
     if chroot_run "command -v limine-update" &>/dev/null; then
-        chroot_run "limine-update" >> "$LOG_FILE" 2>&1 || true
+        log_info "Running limine-update..."
+        chroot_run "limine-update" 2>&1 | tee -a "$LOG_FILE" >&2 || true
     fi
 
     # Ensure Limine EFI is installed to fallback location
+    log_info "Installing Limine EFI bootloader..."
     chroot_run "
         mkdir -p /boot/EFI/BOOT
         cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/
-    " >> "$LOG_FILE" 2>&1
+    " 2>&1 | tee -a "$LOG_FILE" >&2
 
     log_success "Limine installed"
 }
