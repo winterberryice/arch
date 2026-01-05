@@ -93,28 +93,28 @@ log() {
 
 log_info() {
     log "INFO: $*"
-    gum style --foreground 4 "ℹ $*"
+    gum style --foreground 4 "ℹ $*" >&2
 }
 
 log_success() {
     log "SUCCESS: $*"
-    gum style --foreground 2 "✓ $*"
+    gum style --foreground 2 "✓ $*" >&2
 }
 
 log_warn() {
     log "WARN: $*"
-    gum style --foreground 3 "⚠ $*"
+    gum style --foreground 3 "⚠ $*" >&2
 }
 
 log_error() {
     log "ERROR: $*"
-    gum style --foreground 1 "✗ $*"
+    gum style --foreground 1 "✗ $*" >&2
 }
 
 log_step() {
     log "STEP: $*"
-    echo
-    gum style --foreground 6 --bold "→ $*"
+    echo >&2
+    gum style --foreground 6 --bold "→ $*" >&2
 }
 
 # --- ERROR HANDLING ---
