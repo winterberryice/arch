@@ -5,6 +5,25 @@
 # Pinned archinstall version
 ARCHINSTALL_VERSION="${ARCHINSTALL_VERSION:-3.0.14-1}"
 
+# --- MKINITCPIO OPTIMIZATION ---
+# Disable hooks in the chroot BEFORE archinstall runs to prevent multiple rebuilds
+
+disable_mkinitcpio_in_chroot() {
+    log_info "Disabling mkinitcpio hooks in chroot (speed optimization)..."
+
+    # Disable hooks in the mounted system
+    if [ -f "$MOUNT_POINT/usr/share/libalpm/hooks/90-mkinitcpio-install.hook" ]; then
+        mv "$MOUNT_POINT/usr/share/libalpm/hooks/90-mkinitcpio-install.hook" \
+           "$MOUNT_POINT/usr/share/libalpm/hooks/90-mkinitcpio-install.hook.disabled"
+    fi
+    if [ -f "$MOUNT_POINT/usr/share/libalpm/hooks/60-mkinitcpio-remove.hook" ]; then
+        mv "$MOUNT_POINT/usr/share/libalpm/hooks/60-mkinitcpio-remove.hook" \
+           "$MOUNT_POINT/usr/share/libalpm/hooks/60-mkinitcpio-remove.hook.disabled"
+    fi
+
+    log_success "mkinitcpio hooks disabled"
+}
+
 # --- JSON GENERATION ---
 
 generate_user_config() {
@@ -138,10 +157,17 @@ run_archinstall() {
     # Install/update archinstall
     install_archinstall
 
+    # Bootstrap base system into chroot so we can disable hooks
+    log_info "Bootstrapping base system..."
+    pacstrap "$MOUNT_POINT" base >> "$LOG_FILE" 2>&1
+
+    # Disable mkinitcpio hooks BEFORE installing remaining packages
+    disable_mkinitcpio_in_chroot
+
     # Show what we're doing
-    log_info "Installing base system with archinstall..."
+    log_info "Installing remaining packages with archinstall..."
     log_info "This will take 10-30 minutes depending on your internet speed."
-    echo
+    echo >&2
 
     # Run archinstall with our pre-mounted config
     # Note: archinstall will use what's already mounted at $MOUNT_POINT
