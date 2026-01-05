@@ -293,9 +293,6 @@ create_initial_snapshot() {
 run_post_install() {
     log_step "Post-Installation Setup"
 
-    # Disable hooks NOW to prevent rebuilds during configuration/AUR installation
-    disable_mkinitcpio_hooks
-
     # Configure components
     configure_mkinitcpio
     configure_limine
@@ -304,8 +301,7 @@ run_post_install() {
     # Install AUR packages for snapshot booting (optional, may fail)
     install_limine_snapper_packages || true
 
-    # Re-enable hooks and rebuild ONCE at the end
-    enable_mkinitcpio_hooks
+    # Rebuild initramfs with final configuration
     rebuild_initramfs
     update_limine
 
