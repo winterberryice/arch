@@ -231,20 +231,20 @@ rebuild_initramfs() {
 }
 
 update_limine() {
-    log_info "Updating Limine boot entries..."
+    log_info "Installing Limine bootloader..."
 
     # Try limine-update first (from limine-mkinitcpio-hook)
     if chroot_run "command -v limine-update" &>/dev/null; then
         chroot_run "limine-update" >> "$LOG_FILE" 2>&1 || true
     fi
 
-    # Ensure Limine EFI is installed
+    # Ensure Limine EFI is installed to fallback location
     chroot_run "
         mkdir -p /boot/EFI/BOOT
         cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/
     " >> "$LOG_FILE" 2>&1
 
-    log_success "Limine updated"
+    log_success "Limine installed"
 }
 
 # --- SERVICES AND FINAL SETUP ---

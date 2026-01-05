@@ -24,7 +24,7 @@ generate_user_config() {
     "audio_config": {
         "audio": "pipewire"
     },
-    "bootloader": "Limine",
+    "bootloader": null,
     "disk_config": {
         "config_type": "pre_mounted_config",
         "mountpoint": "$MOUNT_POINT"
@@ -51,6 +51,7 @@ generate_user_config() {
         "vim",
         "networkmanager",
         "snapper",
+        "limine",
         "cosmic",
         "cosmic-greeter",
         "xdg-desktop-portal-cosmic",
