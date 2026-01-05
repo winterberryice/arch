@@ -87,7 +87,7 @@ ESP_PATH=\"/boot\"
 KERNEL_CMDLINE[default]=\"$cmdline\"
 
 ENABLE_UKI=yes
-CUSTOM_UKI_NAME=\"arch-cosmic\"
+CUSTOM_UKI_NAME=\"archcosmic\"
 
 ENABLE_LIMINE_FALLBACK=yes
 
