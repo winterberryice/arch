@@ -15,7 +15,24 @@ chroot_run() {
 }
 
 # --- MKINITCPIO OPTIMIZATION ---
-# Re-enable hooks that were disabled before archinstall ran
+# Disable hooks during post-install configuration to prevent multiple rebuilds
+
+disable_mkinitcpio_hooks() {
+    log_info "Disabling mkinitcpio hooks during configuration..."
+
+    chroot_run "
+        if [ -f /usr/share/libalpm/hooks/90-mkinitcpio-install.hook ]; then
+            mv /usr/share/libalpm/hooks/90-mkinitcpio-install.hook \
+               /usr/share/libalpm/hooks/90-mkinitcpio-install.hook.disabled
+        fi
+        if [ -f /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook ]; then
+            mv /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook \
+               /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook.disabled
+        fi
+    "
+
+    log_success "mkinitcpio hooks disabled"
+}
 
 enable_mkinitcpio_hooks() {
     log_info "Re-enabling mkinitcpio hooks..."
@@ -276,6 +293,9 @@ create_initial_snapshot() {
 run_post_install() {
     log_step "Post-Installation Setup"
 
+    # Disable hooks NOW to prevent rebuilds during configuration/AUR installation
+    disable_mkinitcpio_hooks
+
     # Configure components
     configure_mkinitcpio
     configure_limine
@@ -284,7 +304,7 @@ run_post_install() {
     # Install AUR packages for snapshot booting (optional, may fail)
     install_limine_snapper_packages || true
 
-    # Re-enable hooks (disabled before archinstall) and rebuild once
+    # Re-enable hooks and rebuild ONCE at the end
     enable_mkinitcpio_hooks
     rebuild_initramfs
     update_limine
