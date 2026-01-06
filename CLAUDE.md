@@ -196,31 +196,27 @@ Like omarchy, we disable mkinitcpio hooks during package installation to avoid
 rebuilding initramfs multiple times. Hooks are re-enabled and initramfs is
 rebuilt once at the end. See `lib/post-install.sh:disable_mkinitcpio_hooks()`
 
-## Phase 2: Post-Install Configuration (Future Work)
+## Phase 2: Wintarch System Management
 
-### Goals
-Create an omarchy-style post-install configuration system that runs after the base installer.
+Phase 2 introduces **wintarch** - a git-based system management layer inspired by omarchy.
 
-### Structure (Proposed)
-```
-config/
-├── packages/           # Package installation scripts
-│   ├── desktop.sh     # Desktop apps (browsers, editors, etc.)
-│   ├── dev.sh         # Development tools
-│   └── media.sh       # Media apps
-├── system/            # System configuration
-│   ├── tweaks.sh      # Performance/UX tweaks
-│   └── services.sh    # Enable/configure services
-└── utils/             # Custom utilities
-    └── helpers.sh     # Common functions
-```
+### Key Decisions
+| Aspect | Decision |
+|--------|----------|
+| Name | wintarch |
+| Repo location | `/opt/wintarch/` |
+| State location | `/var/lib/wintarch/` |
+| Commands | Symlinks in `/usr/local/bin/` |
+| Versioning | Semver (v0.1.0, v0.2.0, ...) |
+| Migrations | Unix timestamp filenames |
 
-### Reference
-Look at `vendor/omarchy/install/config/` and `vendor/omarchy/install/packaging/` for examples of how omarchy structures post-install configuration.
+### Core Features
+- **wintarch-update**: Snapshot-first system updates with migrations
+- **wintarch-snapshot**: BTRFS snapshot management
+- **wintarch-migrations**: Check migration status
+- Git-based updates with automatic migrations
+- Fresh installs skip migrations (mark all as done)
 
-### Integration
-Post-install config should be:
-- Optional (user can skip)
-- Modular (user can select which parts to run)
-- Idempotent (safe to run multiple times)
+### Full Specification
+See **[docs/PHASE2-SPEC.md](docs/PHASE2-SPEC.md)** for complete architecture, rationale, and implementation details.
 
