@@ -10,12 +10,12 @@ The base system installer is fully functional and tested:
 - Dual-boot partitioning support
 - Snapper snapshot management
 
-### 🚧 Phase 2: Post-Install Configuration - **PLANNED**
-Next phase will add omarchy-style configuration:
-- Package installation utilities
-- System configuration scripts
-- Custom utilities and tools
-- Desktop environment customization
+### 🚧 Phase 2: Wintarch System Management - **IN PROGRESS**
+Git-based system management layer (like omarchy):
+- `wintarch-update`: Snapshot-first system updates
+- `wintarch-snapshot`: BTRFS snapshot management
+- `wintarch-migrations`: Migration system for evolving installs
+- `wintarch-pkg-add/drop`: Safe package helpers
 
 ## Project Overview
 
@@ -75,20 +75,27 @@ A dual-boot capable Arch Linux installer inspired by [Omarchy](https://github.co
 
 ```
 arch/
-├── CLAUDE.md              # This file
-├── README.md              # User-facing documentation
-├── install.sh             # Main entry point
-├── lib/
-│   ├── helpers.sh         # Logging, errors, presentation (from omarchy)
+├── bin/                   # Wintarch commands (symlinked to /usr/local/bin/)
+│   ├── wintarch-update    # Main update command
+│   ├── wintarch-snapshot  # BTRFS snapshot management
+│   ├── wintarch-migrations # Migration runner
+│   ├── wintarch-pkg-add   # Safe package install
+│   ├── wintarch-pkg-drop  # Safe package removal
+│   └── wintarch-version   # Show version
+├── install/               # Phase 1 installer scripts
+│   ├── install.sh         # Main entry point
+│   ├── helpers.sh         # Logging, errors, presentation
 │   ├── configurator.sh    # TUI for user input
 │   ├── disk.sh            # Disk detection and selection
 │   ├── partitioning.sh    # LUKS, BTRFS, mounting
 │   ├── archinstall.sh     # JSON generation, archinstall invocation
-│   └── post-install.sh    # Limine-snapper setup, COSMIC config
+│   └── post-install.sh    # Limine-snapper setup, wintarch setup
+├── migrations/            # Wintarch migrations (timestamp-named .sh files)
+├── version                # Wintarch version (e.g., v0.1.0)
+├── docs/                  # Documentation
+├── test/                  # Test scripts
 ├── old/                   # Previous implementation (reference)
-└── vendor/
-    ├── omarchy/           # Omarchy post-install scripts (reference)
-    └── omarchy-iso/       # Omarchy ISO installer (reference)
+└── vendor/                # Vendored dependencies (omarchy reference)
 ```
 
 ## Disk Installation Modes
@@ -141,14 +148,14 @@ HOOKS=(base udev keyboard autodetect microcode modconf kms keymap consolefont bl
 
 ### Testing
 - Use QEMU with OVMF for EFI testing
-- Run `./test.sh` to create disk and boot ISO
-- Run `./test.sh --boot-disk` to test installed system
+- Run `./test/test.sh` to create disk and boot ISO
+- Run `./test/test.sh --boot-disk` to test installed system
 
 ### Updating Archinstall
 When archinstall updates break compatibility:
 1. Check new JSON schema: `archinstall --dry-run`
-2. Update lib/archinstall.sh
-3. Update pinned version in this file and install.sh
+2. Update install/archinstall.sh
+3. Update pinned version in this file and install/install.sh
 
 ### TUI Library
 We use [gum](https://github.com/charmbracelet/gum) for all TUI interactions:
@@ -165,12 +172,13 @@ We use [gum](https://github.com/charmbracelet/gum) for all TUI interactions:
 
 | Our File | Based On | Purpose |
 |----------|----------|---------|
-| `lib/helpers.sh` | `omarchy/install/helpers/*.sh` | Logging, errors, TUI |
-| `lib/configurator.sh` | `omarchy-iso/.../configurator` | User input TUI |
-| `lib/disk.sh` | Custom + old implementation | Dual-boot disk detection |
-| `lib/partitioning.sh` | Custom + old implementation | LUKS, BTRFS, mounting |
-| `lib/archinstall.sh` | `omarchy-iso/.../.automated_script.sh` | JSON generation, archinstall |
-| `lib/post-install.sh` | `omarchy/install/login/limine-snapper.sh` | Limine-Snapper setup |
+| `install/helpers.sh` | `omarchy/install/helpers/*.sh` | Logging, errors, TUI |
+| `install/configurator.sh` | `omarchy-iso/.../configurator` | User input TUI |
+| `install/disk.sh` | Custom + old implementation | Dual-boot disk detection |
+| `install/partitioning.sh` | Custom + old implementation | LUKS, BTRFS, mounting |
+| `install/archinstall.sh` | `omarchy-iso/.../.automated_script.sh` | JSON generation, archinstall |
+| `install/post-install.sh` | `omarchy/install/login/limine-snapper.sh` | Limine-Snapper setup |
+| `bin/wintarch-*` | `omarchy/bin/omarchy-*` | System management commands |
 
 ### Key Reference Files
 ```
@@ -194,7 +202,7 @@ old/
 ### mkinitcpio Optimization
 Like omarchy, we disable mkinitcpio hooks during package installation to avoid
 rebuilding initramfs multiple times. Hooks are re-enabled and initramfs is
-rebuilt once at the end. See `lib/post-install.sh:disable_mkinitcpio_hooks()`
+rebuilt once at the end. See `install/post-install.sh:disable_mkinitcpio_hooks()`
 
 ## Phase 2: Wintarch System Management
 
@@ -204,19 +212,43 @@ Phase 2 introduces **wintarch** - a git-based system management layer inspired b
 | Aspect | Decision |
 |--------|----------|
 | Name | wintarch |
-| Repo location | `/opt/wintarch/` |
+| Repo location | `/opt/wintarch/` (whole repo cloned here) |
 | State location | `/var/lib/wintarch/` |
-| Commands | Symlinks in `/usr/local/bin/` |
+| Commands | Symlinks in `/usr/local/bin/` → `/opt/wintarch/bin/` |
 | Versioning | Semver (v0.1.0, v0.2.0, ...) |
-| Migrations | Unix timestamp filenames |
+| Migrations | Unix timestamp filenames (e.g., `1704067200.sh`) |
 
-### Core Features
-- **wintarch-update**: Snapshot-first system updates with migrations
-- **wintarch-snapshot**: BTRFS snapshot management
-- **wintarch-migrations**: Check migration status
-- Git-based updates with automatic migrations
-- Fresh installs skip migrations (mark all as done)
+### Wintarch Commands
+| Command | Description |
+|---------|-------------|
+| `wintarch-update` | Main update: snapshot → git pull → packages → migrations |
+| `wintarch-snapshot` | Create/list/delete BTRFS snapshots via snapper |
+| `wintarch-migrations` | Show pending/completed migrations, run manually |
+| `wintarch-pkg-add` | Safe package install with verification |
+| `wintarch-pkg-drop` | Safe package removal (no error if missing) |
+| `wintarch-version` | Show installed version |
+
+### Update Flow
+```
+wintarch-update
+├── 1. Confirm with user (skip with -y)
+├── 2. Create BTRFS snapshot (pre-update-v0.1.0-to-v0.2.0)
+├── 3. git pull /opt/wintarch
+├── 4. Update system packages (pacman + yay)
+├── 5. Remove orphan packages
+├── 6. Run pending migrations
+├── 7. Update command symlinks
+└── 8. Check if reboot needed (kernel update)
+```
+
+### Fresh Install Setup
+During Phase 1 post-install:
+1. Clone repo to `/opt/wintarch/`
+2. Create `/var/lib/wintarch/` state directory
+3. Mark all existing migrations as completed (fresh install = current state)
+4. Create symlinks in `/usr/local/bin/`
+5. Write version to `/var/lib/wintarch/version`
 
 ### Full Specification
-See **[docs/PHASE2-SPEC.md](docs/PHASE2-SPEC.md)** for complete architecture, rationale, and implementation details.
+See **[docs/PHASE2-SPEC.md](docs/PHASE2-SPEC.md)** for complete architecture and rationale.
 
