@@ -1,6 +1,6 @@
 #!/bin/bash
 # BTRFS snapshot management via snapper
-# Usage: wintarch-snapshot <create|list|delete> [args]
+# Usage: wintarch-snapshot <create|list|delete|restore> [args]
 
 set -e
 
@@ -8,12 +8,13 @@ COMMAND="$1"
 shift || true
 
 if [[ -z $COMMAND ]]; then
-    echo "Usage: wintarch-snapshot <create|list|delete> [args]" >&2
+    echo "Usage: wintarch-snapshot <create|list|delete|restore> [args]" >&2
     echo "" >&2
     echo "Commands:" >&2
     echo "  create [description]  Create a new snapshot" >&2
     echo "  list                  List all snapshots" >&2
     echo "  delete <number>       Delete a snapshot" >&2
+    echo "  restore               Restore system from booted snapshot" >&2
     exit 1
 fi
 
@@ -46,6 +47,30 @@ case "$COMMAND" in
         fi
         sudo snapper -c root delete "$1"
         echo "Snapshot $1 deleted."
+        ;;
+    restore)
+        # Restore system from a booted snapshot (via limine-snapper-restore)
+        if ! command -v limine-snapper-restore &>/dev/null; then
+            echo "Error: limine-snapper-restore not found." >&2
+            echo "Is limine-snapper-sync installed?" >&2
+            exit 1
+        fi
+
+        echo -e "\e[33mThis will restore the system to the currently booted snapshot.\e[0m"
+        echo "Make sure you have booted into the snapshot you want to restore."
+        echo ""
+
+        if command -v gum &>/dev/null; then
+            gum confirm "Restore system from current snapshot?" || { echo "Cancelled."; exit 0; }
+        else
+            read -p "Restore system from current snapshot? [y/N] " -n 1 -r
+            echo
+            [[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Cancelled."; exit 0; }
+        fi
+
+        echo -e "\e[32mRestoring system...\e[0m"
+        sudo limine-snapper-restore
+        echo -e "\e[32mSystem restored. Please reboot.\e[0m"
         ;;
     *)
         echo "Unknown command: $COMMAND" >&2
