@@ -1,9 +1,9 @@
 #!/bin/bash
 # Wintarch Installer Bootstrap
-# Usage: curl -fsSL https://raw.githubusercontent.com/YOUR_USER/arch/master/boot.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/winterberryice/arch/master/boot.sh | bash
 #
 # Environment variables:
-#   WINTARCH_REPO - GitHub repo (default: YOUR_USER/arch)
+#   WINTARCH_REPO - GitHub repo (default: winterberryice/arch)
 #   WINTARCH_REF  - Branch/tag to use (default: master)
 
 set -e
