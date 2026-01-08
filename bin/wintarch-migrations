@@ -1,0 +1,103 @@
+#!/bin/bash
+# Migration management
+# Usage: wintarch-migrations [--status|--run]
+
+set -e
+
+WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
+STATE_DIR="/var/lib/wintarch/migrations"
+SKIPPED_DIR="$STATE_DIR/skipped"
+
+mkdir -p "$STATE_DIR" "$SKIPPED_DIR"
+
+show_status() {
+    local show_all="${1:-false}"
+
+    echo -e "\e[1mMigrations:\e[0m"
+    echo ""
+
+    local has_pending=false
+    local has_completed=false
+    local has_skipped=false
+
+    for file in "$WINTARCH_PATH/migrations"/*.sh; do
+        [[ -f "$file" ]] || continue
+
+        local filename=$(basename "$file")
+        local name="${filename%.sh}"
+
+        if [[ -f "$STATE_DIR/$filename" ]]; then
+            if [[ "$show_all" == "true" ]]; then
+                echo -e "  \e[32m✓\e[0m $name (completed)"
+                has_completed=true
+            fi
+        elif [[ -f "$SKIPPED_DIR/$filename" ]]; then
+            echo -e "  \e[33m⊘\e[0m $name (skipped)"
+            has_skipped=true
+        else
+            echo -e "  \e[34m●\e[0m $name (pending)"
+            has_pending=true
+        fi
+    done
+
+    if [[ "$has_pending" == "false" && "$has_skipped" == "false" ]]; then
+        if [[ "$show_all" == "false" ]]; then
+            echo "  No pending migrations."
+        fi
+    fi
+}
+
+run_migrations() {
+    for file in "$WINTARCH_PATH/migrations"/*.sh; do
+        [[ -f "$file" ]] || continue
+
+        local filename=$(basename "$file")
+
+        # Skip if already completed or skipped
+        [[ -f "$STATE_DIR/$filename" ]] && continue
+        [[ -f "$SKIPPED_DIR/$filename" ]] && continue
+
+        echo -e "\e[32mRunning migration: ${filename%.sh}\e[0m"
+
+        if bash "$file"; then
+            touch "$STATE_DIR/$filename"
+            echo -e "\e[32mMigration completed: ${filename%.sh}\e[0m"
+        else
+            if command -v gum &>/dev/null; then
+                if gum confirm "Migration ${filename%.sh} failed. Skip and continue?"; then
+                    touch "$SKIPPED_DIR/$filename"
+                    echo "Skipped: ${filename%.sh}"
+                else
+                    echo "Aborting migrations."
+                    exit 1
+                fi
+            else
+                echo "Migration failed. Aborting." >&2
+                exit 1
+            fi
+        fi
+    done
+
+    echo -e "\e[32mAll migrations completed.\e[0m"
+}
+
+case "${1:-}" in
+    --status)
+        show_status true
+        ;;
+    --run)
+        run_migrations
+        ;;
+    "")
+        show_status false
+        ;;
+    *)
+        echo "Usage: wintarch-migrations [--status|--run]" >&2
+        echo "" >&2
+        echo "Options:" >&2
+        echo "  (none)     Show pending migrations" >&2
+        echo "  --status   Show all migrations (pending + completed + skipped)" >&2
+        echo "  --run      Run pending migrations" >&2
+        exit 1
+        ;;
+esac

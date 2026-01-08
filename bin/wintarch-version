@@ -1,0 +1,8 @@
+#!/bin/bash
+# Show wintarch version
+
+set -e
+
+WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
+
+cat "$WINTARCH_PATH/version"
