@@ -5,7 +5,11 @@
 set -e
 
 WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
-LOG_FILE="/var/log/wintarch-update.log"
+LOG_DIR="/var/log/wintarch"
+LOG_FILE="$LOG_DIR/update-$(date '+%Y%m%d-%H%M%S').log"
+
+# Ensure log directory exists
+mkdir -p "$LOG_DIR"
 
 trap 'echo ""; echo -e "\033[0;31mSomething went wrong during the update!\n\nPlease review the output above carefully, correct the error, and retry.\033[0m"' ERR
 
@@ -14,22 +18,49 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
 }
 
+# Get version info
+get_version_info() {
+    CURRENT_VERSION=$(cat /var/lib/wintarch/version 2>/dev/null || echo "unknown")
+
+    # Fetch to check for updates (without pulling)
+    git -C "$WINTARCH_PATH" fetch origin 2>/dev/null || true
+
+    # Get remote version
+    REMOTE_VERSION=$(git -C "$WINTARCH_PATH" show origin/master:version 2>/dev/null || \
+                     git -C "$WINTARCH_PATH" show origin/main:version 2>/dev/null || \
+                     echo "unknown")
+
+    export CURRENT_VERSION REMOTE_VERSION
+}
+
 # Confirmation prompt
 confirm_update() {
+    get_version_info
+
     if ! command -v gum &>/dev/null; then
+        echo "Wintarch: $CURRENT_VERSION → $REMOTE_VERSION"
+        echo ""
         read -p "Continue with update? [y/N] " -n 1 -r
         echo
         [[ $REPLY =~ ^[Yy]$ ]]
         return
     fi
 
+    # Build version display
+    local version_line="Wintarch: $CURRENT_VERSION"
+    if [[ "$CURRENT_VERSION" != "$REMOTE_VERSION" && "$REMOTE_VERSION" != "unknown" ]]; then
+        version_line="Wintarch: $CURRENT_VERSION → $REMOTE_VERSION"
+    fi
+
     gum style --border normal --border-foreground 6 --padding "1 2" \
         "Ready to update?" \
+        "" \
+        "$version_line" \
         "" \
         "This will:" \
         "  • Create a BTRFS snapshot (for rollback)" \
         "  • Update wintarch from git" \
-        "  • Update system packages" \
+        "  • Update system packages (pacman + AUR)" \
         "  • Run any pending migrations" \
         "" \
         "Make sure you're connected to power or have sufficient battery."
@@ -40,9 +71,10 @@ confirm_update() {
 
 # Create pre-update snapshot
 create_snapshot() {
-    local current_version=$(cat /var/lib/wintarch/version 2>/dev/null || echo "unknown")
-    local new_version=$(cat "$WINTARCH_PATH/version" 2>/dev/null || echo "unknown")
-    local description="pre-update-${current_version}-to-${new_version}"
+    # Use already-fetched version info if available, otherwise get it
+    local current="${CURRENT_VERSION:-$(cat /var/lib/wintarch/version 2>/dev/null || echo "unknown")}"
+    local new="${REMOTE_VERSION:-$(cat "$WINTARCH_PATH/version" 2>/dev/null || echo "unknown")}"
+    local description="pre-update-${current}-to-${new}"
 
     echo -e "\e[32mCreating pre-update snapshot...\e[0m"
     wintarch-snapshot create "$description"
@@ -51,7 +83,12 @@ create_snapshot() {
 # Update wintarch from git
 update_git() {
     echo -e "\e[32mUpdating wintarch...\e[0m"
-    git -C "$WINTARCH_PATH" pull --autostash
+    if ! git -C "$WINTARCH_PATH" pull --autostash; then
+        echo -e "\e[31mGit pull failed. Aborting update.\e[0m" >&2
+        log "ERROR: git pull failed"
+        exit 1
+    fi
+    # Reset if there are whitespace issues
     git -C "$WINTARCH_PATH" diff --check || git -C "$WINTARCH_PATH" reset --merge
 }
 
