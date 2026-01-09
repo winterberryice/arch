@@ -38,7 +38,11 @@ confirm_update() {
     get_version_info
 
     if ! command -v gum &>/dev/null; then
-        echo "Wintarch: $CURRENT_VERSION → $REMOTE_VERSION"
+        if [[ "$CURRENT_VERSION" != "$REMOTE_VERSION" && "$REMOTE_VERSION" != "unknown" ]]; then
+            echo "Wintarch: $CURRENT_VERSION → $REMOTE_VERSION"
+        else
+            echo "Wintarch: $CURRENT_VERSION (up to date)"
+        fi
         echo ""
         read -p "Continue with update? [y/N] " -n 1 -r
         echo
@@ -47,9 +51,11 @@ confirm_update() {
     fi
 
     # Build version display
-    local version_line="Wintarch: $CURRENT_VERSION"
+    local version_line
     if [[ "$CURRENT_VERSION" != "$REMOTE_VERSION" && "$REMOTE_VERSION" != "unknown" ]]; then
         version_line="Wintarch: $CURRENT_VERSION → $REMOTE_VERSION"
+    else
+        version_line="Wintarch: $CURRENT_VERSION (up to date)"
     fi
 
     gum style --border normal --border-foreground 6 --padding "1 2" \
