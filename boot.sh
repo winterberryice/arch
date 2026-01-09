@@ -27,6 +27,22 @@ clear
 echo -e "\e[36m$logo\e[0m"
 echo ""
 
+# Optimize mirrors with reflector (retry up to 3 times)
+echo ":: Optimizing mirrors..."
+for i in 1 2 3; do
+    if reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist; then
+        echo "   Mirrors updated successfully"
+        break
+    else
+        if [[ $i -lt 3 ]]; then
+            echo "   Attempt $i failed, retrying in 2s..."
+            sleep 2
+        else
+            echo "   Mirror optimization failed, using defaults"
+        fi
+    fi
+done
+
 # Install git if needed
 echo ":: Installing git..."
 sudo pacman -Sy --noconfirm --needed git
