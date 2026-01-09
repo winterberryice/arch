@@ -49,7 +49,10 @@ iwctl
 # station wlan0 scan
 # station wlan0 connect <network>
 
-# Clone and run
+# One-liner install (recommended)
+curl -fsSL https://raw.githubusercontent.com/winterberryice/arch/master/boot.sh | bash
+
+# Or clone manually
 git clone https://github.com/winterberryice/arch.git
 cd arch
 ./install/install.sh
