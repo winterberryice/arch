@@ -13,9 +13,9 @@
 
 set -euo pipefail
 
-# Script directory
+# Script directory (test.sh is in the test/ directory)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEST_DIR="$SCRIPT_DIR/test"
+TEST_DIR="$SCRIPT_DIR"
 
 # Configuration
 DISK_FILE="$TEST_DIR/test-disk.qcow2"
