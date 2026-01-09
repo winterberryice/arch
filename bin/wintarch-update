@@ -80,7 +80,13 @@ create_snapshot() {
     # Use already-fetched version info if available, otherwise get it
     local current="${CURRENT_VERSION:-$(cat /var/lib/wintarch/version 2>/dev/null || echo "unknown")}"
     local new="${REMOTE_VERSION:-$(cat "$WINTARCH_PATH/version" 2>/dev/null || echo "unknown")}"
-    local description="pre-update-${current}-to-${new}"
+
+    # Timestamp first for sorting, version info appended if changed
+    local timestamp=$(date '+%Y%m%d-%H%M%S')
+    local description="pre-update-${timestamp}"
+    if [[ "$current" != "$new" && "$new" != "unknown" ]]; then
+        description="${description}-${current}-to-${new}"
+    fi
 
     echo -e "\e[32mCreating pre-update snapshot...\e[0m"
     wintarch-snapshot create "$description"
