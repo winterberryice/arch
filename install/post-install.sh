@@ -223,6 +223,31 @@ install_limine_snapper_packages() {
     return 0
 }
 
+install_aur_packages() {
+    log_info "Installing AUR packages (brave, vscode)..."
+
+    # Ensure yay is available
+    if ! chroot_run "command -v yay" &>/dev/null; then
+        if ! install_aur_helper; then
+            log_warn "yay not available - skipping AUR packages"
+            return 1
+        fi
+    fi
+
+    chroot_run "
+        echo '$USERNAME ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/temp-build
+        chmod 440 /etc/sudoers.d/temp-build
+        sudo -u '$USERNAME' yay -S --noconfirm --needed brave-bin visual-studio-code-bin
+        rm -f /etc/sudoers.d/temp-build
+    " >> "$LOG_FILE" 2>&1 || {
+        log_warn "Failed to install some AUR packages"
+        return 1
+    }
+
+    log_success "AUR packages installed"
+    return 0
+}
+
 # --- REBUILD AND UPDATE ---
 
 rebuild_initramfs() {
@@ -262,6 +287,7 @@ configure_services() {
         systemctl enable NetworkManager.service
         systemctl enable cosmic-greeter.service
         systemctl enable power-profiles-daemon.service 2>/dev/null || true
+        systemctl enable bluetooth.service
     "
 
     log_success "Services enabled"
@@ -366,6 +392,9 @@ run_post_install() {
 
     # Install AUR packages for snapshot booting (optional, may fail)
     install_limine_snapper_packages || true
+
+    # Install user AUR packages (brave, vscode)
+    install_aur_packages || true
 
     # Update Limine (this will trigger mkinitcpio automatically via hooks)
     update_limine

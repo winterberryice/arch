@@ -1,24 +1,43 @@
-# Arch Linux Installer (COSMIC Edition)
+# Wintarch
 
-**Status: Phase 2 (Wintarch System Management) In Progress 🚧**
+An opinionated Arch Linux distribution featuring the COSMIC desktop environment, BTRFS snapshots, and simple system management.
 
-A dual-boot capable Arch Linux installer with COSMIC desktop, LUKS encryption, BTRFS snapshots, and self-managing system updates.
+Inspired by [Omarchy](https://github.com/basecamp/omarchy), but with COSMIC instead of Hyprland and dual-boot support.
 
 ## Features
 
-- **Dual-boot support** - Install alongside Windows or other Linux distros
-- **LUKS encryption** - Full disk encryption (mandatory)
-- **BTRFS with snapshots** - Automatic snapshots via Snapper
-- **Bootable snapshots** - Boot into previous system states via Limine
-- **COSMIC desktop** - Modern, Rust-based desktop environment
-- **Self-managing updates** - `wintarch-update` for safe system updates with automatic snapshots
+- **COSMIC Desktop** - System76's modern, Rust-based desktop environment
+- **BTRFS with Snapshots** - Automatic snapshots before updates, bootable rollback via Limine
+- **LUKS Encryption** - Full disk encryption (mandatory)
+- **Dual-Boot Friendly** - Preserve Windows, use free space, or existing partitions
+- **Simple Updates** - One command (`wintarch-update`) handles everything safely
+- **Pre-configured** - Ready to use out of the box
+
+## What's Included
+
+### Desktop & System
+- COSMIC desktop + greeter
+- PipeWire audio
+- NetworkManager
+- Bluetooth (bluez + bluez-utils, service enabled)
+- Power profiles daemon
+
+### Applications
+- Firefox - Web browser
+- Brave - Privacy-focused browser (AUR)
+- VS Code - Code editor (AUR)
+- Vim - Terminal editor
+
+### Shell & Tools
+- Zsh - Modern shell
+- Git - Version control
+- yay - AUR helper
 
 ## Requirements
 
 - UEFI system (Legacy BIOS not supported)
 - Minimum 40GB free space
 - Internet connection
-- Arch Linux live USB
 
 ## Installation
 
@@ -30,23 +49,20 @@ iwctl
 # station wlan0 scan
 # station wlan0 connect <network>
 
-# One-liner install
+# One-liner install (recommended)
 curl -fsSL https://raw.githubusercontent.com/winterberryice/arch/master/boot.sh | bash
 
-# Or clone and run manually
+# Or clone manually
 git clone https://github.com/winterberryice/arch.git
 cd arch
 ./install/install.sh
 ```
 
-## What Gets Installed
-
-- Arch Linux base system
-- COSMIC desktop environment
-- Limine bootloader (with snapshot boot support)
-- Snapper for BTRFS snapshots
-- NetworkManager
-- PipeWire audio
+The TUI installer will guide you through:
+- Keyboard layout
+- Username & password
+- Hostname & timezone
+- Disk selection (wipe, use free space, or existing partition)
 
 ## Partition Layout
 
@@ -57,15 +73,16 @@ cd arch
 
 ### BTRFS Subvolumes
 
-- `@` → `/`
-- `@home` → `/home`
-- `@log` → `/var/log`
-- `@pkg` → `/var/cache/pacman/pkg`
+| Subvolume | Mountpoint | Purpose |
+|-----------|------------|---------|
+| @ | / | Root filesystem |
+| @home | /home | User data |
+| @log | /var/log | System logs |
+| @pkg | /var/cache/pacman/pkg | Package cache |
 
-## System Updates
+## System Management
 
-After installation, use `wintarch-update` for safe system updates:
-
+### Update System
 ```bash
 wintarch-update        # Update system (creates snapshot first)
 wintarch-update -y     # Skip confirmation
@@ -78,28 +95,49 @@ The update process:
 4. Runs any new migrations
 5. Prompts for reboot if kernel updated
 
-### Other Commands
-
+### Manage Snapshots
 ```bash
-wintarch-snapshot create "before experiment"  # Manual snapshot
-wintarch-snapshot list                        # List snapshots
-wintarch-snapshot restore                     # Restore from booted snapshot
-wintarch-migrations                           # Check migration status
-wintarch-version                              # Show version
+wintarch-snapshot list              # List all snapshots
+wintarch-snapshot create "message"  # Create manual snapshot
+wintarch-snapshot delete 5          # Delete snapshot #5
+wintarch-snapshot restore           # Restore from booted snapshot
 ```
 
-### Rollback
+### Package Management
+```bash
+wintarch-pkg-add package-name   # Install with verification
+wintarch-pkg-drop package-name  # Remove (no error if missing)
+```
+
+### Other Commands
+```bash
+wintarch-version      # Show installed version
+wintarch-migrations   # Check migration status
+```
+
+## Bootable Snapshots
 
 If something breaks:
-1. Reboot → Limine menu → "Snapshots" → select one
-2. System boots into snapshot
+1. Reboot -> Limine menu -> "Snapshots" -> select one
+2. System boots into snapshot (read-only overlay)
 3. Run `wintarch-snapshot restore` to make it permanent
 4. Reboot
 
-## Acknowledgments
+Up to 5 snapshots appear in the boot menu via limine-snapper-sync.
 
-Inspired by [Omarchy](https://omarchy.org) by DHH.
+## Differences from Omarchy
+
+| Aspect | Omarchy | Wintarch |
+|--------|---------|----------|
+| Desktop | Hyprland | COSMIC |
+| Disk mode | Wipe only | Dual-boot support |
+| Auto-login | Yes | No (multi-user) |
+| Target | Single user | General purpose |
 
 ## License
 
 MIT
+
+## Acknowledgments
+
+Inspired by [Omarchy](https://omarchy.org) by DHH.

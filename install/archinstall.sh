@@ -55,7 +55,11 @@ generate_user_config() {
         "cosmic",
         "cosmic-greeter",
         "xdg-desktop-portal-cosmic",
-        "power-profiles-daemon"
+        "power-profiles-daemon",
+        "firefox",
+        "zsh",
+        "bluez",
+        "bluez-utils"
     ],
     "parallel_downloads": 8,
     "profile_config": {
