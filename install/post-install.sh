@@ -1,5 +1,5 @@
 #!/bin/bash
-# lib/post-install.sh - Post-installation setup
+# install/post-install.sh - Post-installation setup
 # Based on omarchy's install/login/limine-snapper.sh
 #
 # This runs AFTER archinstall, in chroot, to configure:
@@ -7,6 +7,7 @@
 # - Limine bootloader with snapshot support
 # - Snapper for BTRFS snapshots
 # - COSMIC desktop greeter
+# - Wintarch system management
 
 # --- CHROOT HELPER ---
 
@@ -293,6 +294,66 @@ create_initial_snapshot() {
     log_success "Initial snapshots created (root + home)"
 }
 
+# --- WINTARCH SETUP ---
+
+setup_wintarch() {
+    log_info "Setting up wintarch system management..."
+
+    # Get the repo root (parent of install/ directory)
+    local repo_root
+    repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+    # Copy entire repo to /opt/wintarch/ in the chroot
+    log_info "Copying wintarch to /opt/wintarch/..."
+    mkdir -p "$MOUNT_POINT/opt/wintarch"
+    cp -a "$repo_root/bin" "$MOUNT_POINT/opt/wintarch/"
+    cp -a "$repo_root/migrations" "$MOUNT_POINT/opt/wintarch/"
+    cp -a "$repo_root/version" "$MOUNT_POINT/opt/wintarch/"
+    # Also copy install/ for future reference (and potential re-runs)
+    cp -a "$repo_root/install" "$MOUNT_POINT/opt/wintarch/"
+
+    # Create state directory
+    log_info "Creating wintarch state directory..."
+    chroot_run "mkdir -p /var/lib/wintarch/migrations"
+
+    # Mark all existing migrations as completed (fresh install = current state)
+    log_info "Initializing migration state..."
+    chroot_run "
+        for migration in /opt/wintarch/migrations/*.sh; do
+            [ -f \"\$migration\" ] || continue
+            touch \"/var/lib/wintarch/migrations/\$(basename \"\$migration\")\"
+        done
+    "
+
+    # Copy version to state
+    chroot_run "cp /opt/wintarch/version /var/lib/wintarch/version"
+
+    # Create symlinks in /usr/local/bin/
+    log_info "Creating command symlinks..."
+    chroot_run "
+        for cmd in /opt/wintarch/bin/wintarch-*; do
+            [ -x \"\$cmd\" ] || continue
+            ln -sf \"\$cmd\" \"/usr/local/bin/\$(basename \"\$cmd\")\"
+        done
+    "
+
+    # Initialize git repo for updates (if not already a git repo)
+    if [[ -d "$repo_root/.git" ]]; then
+        log_info "Copying git repository..."
+        cp -a "$repo_root/.git" "$MOUNT_POINT/opt/wintarch/"
+    else
+        log_info "Initializing git repository..."
+        chroot_run "
+            cd /opt/wintarch
+            git init
+            git add -A
+            git commit -m 'Initial wintarch setup'
+        " >> "$LOG_FILE" 2>&1 || true
+    fi
+
+    log_success "Wintarch setup complete"
+}
+
 # --- MAIN POST-INSTALL FLOW ---
 
 run_post_install() {
@@ -312,6 +373,11 @@ run_post_install() {
     # Final configuration
     configure_services
     configure_locale
+
+    # Setup wintarch system management
+    setup_wintarch
+
+    # Create initial snapshot (after wintarch is set up)
     create_initial_snapshot
 
     log_success "Post-installation complete"

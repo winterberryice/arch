@@ -3,7 +3,7 @@
 # Dual-boot capable with LUKS encryption and BTRFS snapshots
 #
 # Usage: Run from Arch Linux live environment
-#        curl -fsSL https://raw.githubusercontent.com/.../install.sh | bash
+#        curl -fsSL https://raw.githubusercontent.com/winterberryice/arch/master/boot.sh | bash
 
 set -eEuo pipefail
 
@@ -16,12 +16,12 @@ MOUNT_POINT="/mnt/archinstall"
 LOG_FILE="/var/log/arch-cosmic-install.log"
 
 # Source libraries
-source "$SCRIPT_DIR/lib/helpers.sh"
-source "$SCRIPT_DIR/lib/disk.sh"
-source "$SCRIPT_DIR/lib/configurator.sh"
-source "$SCRIPT_DIR/lib/partitioning.sh"
-source "$SCRIPT_DIR/lib/archinstall.sh"
-source "$SCRIPT_DIR/lib/post-install.sh"
+source "$SCRIPT_DIR/helpers.sh"
+source "$SCRIPT_DIR/disk.sh"
+source "$SCRIPT_DIR/configurator.sh"
+source "$SCRIPT_DIR/partitioning.sh"
+source "$SCRIPT_DIR/archinstall.sh"
+source "$SCRIPT_DIR/post-install.sh"
 
 # --- MAIN INSTALLATION FLOW ---
 

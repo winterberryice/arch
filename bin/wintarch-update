@@ -1,0 +1,181 @@
+#!/bin/bash
+# Main system update command
+# Usage: wintarch-update [-y]
+
+set -e
+
+WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
+LOG_DIR="/var/log/wintarch"
+LOG_FILE="$LOG_DIR/update-$(date '+%Y%m%d-%H%M%S').log"
+
+# Ensure log directory exists
+mkdir -p "$LOG_DIR"
+
+trap 'echo ""; echo -e "\033[0;31mSomething went wrong during the update!\n\nPlease review the output above carefully, correct the error, and retry.\033[0m"' ERR
+
+# Logging
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+# Get version info
+get_version_info() {
+    CURRENT_VERSION=$(cat /var/lib/wintarch/version 2>/dev/null || echo "unknown")
+
+    # Fetch to check for updates (without pulling)
+    git -C "$WINTARCH_PATH" fetch origin 2>/dev/null || true
+
+    # Get remote version
+    REMOTE_VERSION=$(git -C "$WINTARCH_PATH" show origin/master:version 2>/dev/null || \
+                     git -C "$WINTARCH_PATH" show origin/main:version 2>/dev/null || \
+                     echo "unknown")
+
+    export CURRENT_VERSION REMOTE_VERSION
+}
+
+# Confirmation prompt
+confirm_update() {
+    get_version_info
+
+    if ! command -v gum &>/dev/null; then
+        if [[ "$CURRENT_VERSION" != "$REMOTE_VERSION" && "$REMOTE_VERSION" != "unknown" ]]; then
+            echo "Wintarch: $CURRENT_VERSION → $REMOTE_VERSION"
+        else
+            echo "Wintarch: $CURRENT_VERSION (up to date)"
+        fi
+        echo ""
+        read -p "Continue with update? [y/N] " -n 1 -r
+        echo
+        [[ $REPLY =~ ^[Yy]$ ]]
+        return
+    fi
+
+    # Build version display
+    local version_line
+    if [[ "$CURRENT_VERSION" != "$REMOTE_VERSION" && "$REMOTE_VERSION" != "unknown" ]]; then
+        version_line="Wintarch: $CURRENT_VERSION → $REMOTE_VERSION"
+    else
+        version_line="Wintarch: $CURRENT_VERSION (up to date)"
+    fi
+
+    gum style --border normal --border-foreground 6 --padding "1 2" \
+        "Ready to update?" \
+        "" \
+        "$version_line" \
+        "" \
+        "This will:" \
+        "  • Create a BTRFS snapshot (for rollback)" \
+        "  • Update wintarch from git" \
+        "  • Update system packages (pacman + AUR)" \
+        "  • Run any pending migrations" \
+        "" \
+        "Make sure you're connected to power or have sufficient battery."
+
+    echo
+    gum confirm "Continue with update?"
+}
+
+# Create pre-update snapshot
+create_snapshot() {
+    # Use already-fetched version info if available, otherwise get it
+    local current="${CURRENT_VERSION:-$(cat /var/lib/wintarch/version 2>/dev/null || echo "unknown")}"
+    local new="${REMOTE_VERSION:-$(cat "$WINTARCH_PATH/version" 2>/dev/null || echo "unknown")}"
+
+    # Timestamp first for sorting, version info appended if changed
+    local timestamp=$(date '+%Y%m%d-%H%M%S')
+    local description="pre-update-${timestamp}"
+    if [[ "$current" != "$new" && "$new" != "unknown" ]]; then
+        description="${description}-${current}-to-${new}"
+    fi
+
+    echo -e "\e[32mCreating pre-update snapshot...\e[0m"
+    wintarch-snapshot create "$description"
+}
+
+# Update wintarch from git
+update_git() {
+    echo -e "\e[32mUpdating wintarch...\e[0m"
+    if ! git -C "$WINTARCH_PATH" pull --autostash; then
+        echo -e "\e[31mGit pull failed. Aborting update.\e[0m" >&2
+        log "ERROR: git pull failed"
+        exit 1
+    fi
+    # Reset if there are whitespace issues
+    git -C "$WINTARCH_PATH" diff --check || git -C "$WINTARCH_PATH" reset --merge
+}
+
+# Update system packages
+update_packages() {
+    echo -e "\e[32mUpdating system packages...\e[0m"
+    sudo pacman -Syu --noconfirm
+
+    # Update AUR packages if yay is available and AUR packages exist
+    if command -v yay &>/dev/null && pacman -Qem &>/dev/null; then
+        echo -e "\e[32mUpdating AUR packages...\e[0m"
+        yay -Sua --noconfirm
+    fi
+
+    # Remove orphan packages
+    local orphans=$(pacman -Qtdq 2>/dev/null || true)
+    if [[ -n $orphans ]]; then
+        echo -e "\e[32mRemoving orphan packages...\e[0m"
+        echo "$orphans" | sudo pacman -Rns --noconfirm - || true
+    fi
+}
+
+# Update command symlinks
+update_symlinks() {
+    echo -e "\e[32mUpdating command symlinks...\e[0m"
+    for cmd in "$WINTARCH_PATH/bin"/wintarch-*; do
+        [[ -x "$cmd" ]] || continue
+        local name=$(basename "$cmd")
+        sudo ln -sf "$cmd" "/usr/local/bin/$name"
+    done
+}
+
+# Check if reboot is needed
+check_reboot() {
+    local running_kernel=$(uname -r | sed 's/-arch/.arch/')
+    local installed_kernel=$(pacman -Q linux 2>/dev/null | awk '{print $2}')
+
+    if [[ "$running_kernel" != "$installed_kernel" ]]; then
+        echo ""
+        if command -v gum &>/dev/null; then
+            gum confirm "Kernel was updated. Reboot now?" && sudo reboot now
+        else
+            read -p "Kernel was updated. Reboot now? [y/N] " -n 1 -r
+            echo
+            [[ $REPLY =~ ^[Yy]$ ]] && sudo reboot now
+        fi
+    fi
+}
+
+# Update version file
+update_version() {
+    local new_version=$(cat "$WINTARCH_PATH/version")
+    echo "$new_version" | sudo tee /var/lib/wintarch/version >/dev/null
+}
+
+# Main
+main() {
+    log "=== Update started ==="
+
+    # Confirm unless -y flag
+    if [[ "${1:-}" != "-y" ]]; then
+        confirm_update || { echo "Update cancelled."; exit 0; }
+    fi
+
+    create_snapshot
+    update_git
+    update_packages
+    wintarch-migrations --run
+    update_symlinks
+    update_version
+
+    log "=== Update completed ==="
+    echo -e "\e[32mUpdate completed successfully!\e[0m"
+
+    check_reboot
+}
+
+main "$@"

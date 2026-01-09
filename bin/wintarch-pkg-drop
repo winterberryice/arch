@@ -1,0 +1,11 @@
+#!/bin/bash
+# Remove package(s) safely (no error if not installed)
+# Usage: wintarch-pkg-drop <package> [package...]
+
+set -e
+
+for pkg in "$@"; do
+    if pacman -Q "$pkg" &>/dev/null; then
+        sudo pacman -Rns --noconfirm "$pkg"
+    fi
+done

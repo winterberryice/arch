@@ -41,33 +41,56 @@
 
 ## Architecture
 
-### Directory Structure
+### Source Repository Structure
 
 ```
-/opt/wintarch/
-├── bin/
-│   ├── wintarch-update          # Main update command
-│   ├── wintarch-snapshot        # Snapshot management
-│   ├── wintarch-migrations      # Migration status
-│   ├── wintarch-rollback        # Rollback assistance
-│   └── wintarch-version         # Show version
-├── migrations/
-│   ├── 1704067200.sh            # Example migration
-│   └── 1706745600.sh            # Another migration
-├── lib/
-│   └── helpers.sh               # Shared functions
-└── version                      # Current version file
+arch/                              # Source repo (GitHub)
+├── bin/                           # Wintarch commands
+│   ├── wintarch-update            # Main update command
+│   ├── wintarch-snapshot          # Snapshot management
+│   ├── wintarch-migrations        # Migration status
+│   ├── wintarch-pkg-add           # Safe package install
+│   ├── wintarch-pkg-drop          # Safe package removal
+│   └── wintarch-version           # Show version
+├── install/                       # Phase 1 installer scripts
+│   ├── install.sh                 # Installer entry point
+│   ├── helpers.sh
+│   ├── configurator.sh
+│   ├── disk.sh
+│   ├── partitioning.sh
+│   ├── archinstall.sh
+│   └── post-install.sh
+├── migrations/                    # Wintarch migrations
+│   └── .gitkeep
+└── version                        # Current version (e.g., v0.1.0)
+```
 
-/var/lib/wintarch/
+### Installed System Structure
+
+```
+/opt/wintarch/                     # Cloned from source repo
+├── bin/
+│   ├── wintarch-update
+│   ├── wintarch-snapshot
+│   ├── wintarch-migrations
+│   ├── wintarch-pkg-add
+│   ├── wintarch-pkg-drop
+│   └── wintarch-version
+├── install/                       # Installer (for reference)
 ├── migrations/
-│   ├── 1704067200.sh            # Marker: migration completed
-│   └── 1706745600.sh            # Marker: migration completed
-└── version                      # Installed version
+│   └── *.sh                       # Migration scripts
+└── version
+
+/var/lib/wintarch/                 # Persistent state
+├── migrations/
+│   ├── skipped/                   # Skipped migration markers
+│   └── *.sh                       # Completed migration markers
+└── version                        # Installed version
 
 /usr/local/bin/
 ├── wintarch-update -> /opt/wintarch/bin/wintarch-update
 ├── wintarch-snapshot -> /opt/wintarch/bin/wintarch-snapshot
-└── ...                          # Symlinks to all commands
+└── ...                            # Symlinks to all commands
 ```
 
 ## Commands
@@ -82,17 +105,16 @@ wintarch-update
 ├── 1. Confirm with user (skip with -y flag)
 ├── 2. Create BTRFS snapshot (pre-update-v0.1.0-to-v0.2.0)
 ├── 3. git pull /opt/wintarch
-├── 4. Run pending migrations
-├── 5. System package update (yay -Syyu)
-├── 6. Remove orphan packages
+├── 4. System package update (pacman -Syu + yay -Sua)
+├── 5. Remove orphan packages
+├── 6. Run pending migrations
 ├── 7. Update command symlinks (if new commands added)
-├── 8. Log to /var/log/wintarch-update.log
+├── 8. Update /var/lib/wintarch/version
 └── 9. Check if reboot needed (kernel update)
 ```
 
 **Flags:**
 - `-y` : Skip confirmation prompt
-- `--no-snapshot` : Skip snapshot (not recommended)
 
 ### wintarch-snapshot
 
@@ -116,14 +138,27 @@ wintarch-migrations --status     # Show all (pending + completed)
 wintarch-migrations --run        # Run pending migrations manually
 ```
 
-### wintarch-rollback
+### wintarch-pkg-add
 
-Assist with system rollback.
+Safe package installation with verification.
 
 **Usage:**
 ```bash
-wintarch-rollback                # List available snapshots
-wintarch-rollback <snapshot>     # Instructions for rollback
+wintarch-pkg-add <package> [package...]  # Install package(s)
+```
+
+**Features:**
+- Skips if already installed
+- Verifies installation succeeded
+- Exits with error if verification fails
+
+### wintarch-pkg-drop
+
+Safe package removal (no error if not installed).
+
+**Usage:**
+```bash
+wintarch-pkg-drop <package> [package...]  # Remove package(s)
 ```
 
 ### wintarch-version
@@ -133,7 +168,6 @@ Show version information.
 **Usage:**
 ```bash
 wintarch-version                 # Show installed version
-wintarch-version --check         # Check for updates
 ```
 
 ## Migration System
@@ -166,25 +200,26 @@ echo "Migration complete: replaced foo with bar"
 ```bash
 run_migrations() {
     local state_dir="/var/lib/wintarch/migrations"
-    mkdir -p "$state_dir"
+    local skipped_dir="$state_dir/skipped"
+    mkdir -p "$state_dir" "$skipped_dir"
 
     for migration in /opt/wintarch/migrations/*.sh; do
         [[ -f "$migration" ]] || continue
 
         local name=$(basename "$migration")
-        local marker="$state_dir/$name"
 
-        # Skip if already run
-        [[ -f "$marker" ]] && continue
+        # Skip if already completed or skipped
+        [[ -f "$state_dir/$name" ]] && continue
+        [[ -f "$skipped_dir/$name" ]] && continue
 
         echo "Running migration: $name"
         if bash "$migration"; then
-            touch "$marker"
+            touch "$state_dir/$name"
             echo "Migration completed: $name"
         else
             # Failed - prompt to skip (omarchy style)
             if gum confirm "Migration failed. Skip and continue?"; then
-                touch "$marker"  # Mark as done to prevent retry
+                touch "$skipped_dir/$name"  # Track separately from completed
                 echo "Skipped: $name"
             else
                 echo "Aborting migrations"
@@ -310,8 +345,10 @@ When a migration fails:
 
 1. Show error output
 2. Prompt: "Migration failed. Skip and continue?"
-3. If skip: Mark as completed (prevents retry loops), continue to next
+3. If skip: Mark in `skipped/` directory (tracked separately from completed), continue to next
 4. If no: Abort update, user can fix and retry
+
+Skipped migrations are tracked separately from completed ones, so `wintarch-migrations --status` can show them distinctly.
 
 This is the omarchy approach - flexible and non-blocking.
 

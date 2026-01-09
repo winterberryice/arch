@@ -1,0 +1,79 @@
+#!/bin/bash
+# BTRFS snapshot management via snapper
+# Usage: wintarch-snapshot <create|list|delete|restore> [args]
+
+set -e
+
+COMMAND="$1"
+shift || true
+
+if [[ -z $COMMAND ]]; then
+    echo "Usage: wintarch-snapshot <create|list|delete|restore> [args]" >&2
+    echo "" >&2
+    echo "Commands:" >&2
+    echo "  create [description]  Create a new snapshot" >&2
+    echo "  list                  List all snapshots" >&2
+    echo "  delete <number>       Delete a snapshot" >&2
+    echo "  restore               Restore system from booted snapshot" >&2
+    exit 1
+fi
+
+# Snapper must be available
+if ! command -v snapper &>/dev/null; then
+    echo "Error: snapper not found. Is it installed?" >&2
+    exit 1
+fi
+
+case "$COMMAND" in
+    create)
+        DESC="${1:-manual snapshot}"
+        echo -e "\e[32mCreating system snapshot: $DESC\e[0m"
+
+        # Get existing snapper config names
+        mapfile -t CONFIGS < <(sudo snapper --csvout list-configs | awk -F, 'NR>1 {print $1}')
+
+        for config in "${CONFIGS[@]}"; do
+            sudo snapper -c "$config" create -c number -d "$DESC"
+        done
+        echo "Snapshot created."
+        ;;
+    list)
+        sudo snapper -c root list
+        ;;
+    delete)
+        if [[ -z ${1:-} ]]; then
+            echo "Usage: wintarch-snapshot delete <number>" >&2
+            exit 1
+        fi
+        sudo snapper -c root delete "$1"
+        echo "Snapshot $1 deleted."
+        ;;
+    restore)
+        # Restore system from a booted snapshot (via limine-snapper-restore)
+        if ! command -v limine-snapper-restore &>/dev/null; then
+            echo "Error: limine-snapper-restore not found." >&2
+            echo "Is limine-snapper-sync installed?" >&2
+            exit 1
+        fi
+
+        echo -e "\e[33mThis will restore the system to the currently booted snapshot.\e[0m"
+        echo "Make sure you have booted into the snapshot you want to restore."
+        echo ""
+
+        if command -v gum &>/dev/null; then
+            gum confirm "Restore system from current snapshot?" || { echo "Cancelled."; exit 0; }
+        else
+            read -p "Restore system from current snapshot? [y/N] " -n 1 -r
+            echo
+            [[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Cancelled."; exit 0; }
+        fi
+
+        echo -e "\e[32mRestoring system...\e[0m"
+        sudo limine-snapper-restore
+        echo -e "\e[32mSystem restored. Please reboot.\e[0m"
+        ;;
+    *)
+        echo "Unknown command: $COMMAND" >&2
+        exit 1
+        ;;
+esac

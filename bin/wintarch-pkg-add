@@ -1,0 +1,33 @@
+#!/bin/bash
+# Install package(s) safely with verification
+# Usage: wintarch-pkg-add <package> [package...]
+
+set -e
+
+if [[ $# -eq 0 ]]; then
+    echo "Usage: wintarch-pkg-add <package> [package...]" >&2
+    exit 1
+fi
+
+# Check if any packages need installing
+needs_install=false
+for pkg in "$@"; do
+    if ! pacman -Q "$pkg" &>/dev/null; then
+        needs_install=true
+        break
+    fi
+done
+
+if $needs_install; then
+    sudo pacman -S --noconfirm --needed "$@" || exit 1
+fi
+
+# Verify all packages installed
+for pkg in "$@"; do
+    if ! pacman -Q "$pkg" &>/dev/null; then
+        echo -e "\033[31mError: Package '$pkg' did not install\033[0m" >&2
+        exit 1
+    fi
+done
+
+exit 0
