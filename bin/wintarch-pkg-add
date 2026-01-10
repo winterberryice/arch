@@ -5,9 +5,6 @@
 set -e
 
 WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
-source "$WINTARCH_PATH/bin/lib/helpers.sh"
-
-require_root "$@"
 
 if [[ $# -eq 0 ]]; then
     echo "Usage: wintarch-pkg-add <package> [package...]" >&2
