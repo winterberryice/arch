@@ -7,12 +7,13 @@ set -e
 WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
 source "$WINTARCH_PATH/bin/lib/helpers.sh"
 
-require_root "$@"
 LOG_DIR="/var/log/wintarch"
 LOG_FILE="$LOG_DIR/update-$(date '+%Y%m%d-%H%M%S').log"
 
-# Ensure log directory exists
-mkdir -p "$LOG_DIR"
+# Ensure log directory and file exist (owned by user for writes)
+sudo mkdir -p "$LOG_DIR"
+sudo touch "$LOG_FILE"
+sudo chown "$USER" "$LOG_FILE"
 
 trap 'echo ""; echo -e "\033[0;31mSomething went wrong during the update!\n\nPlease review the output above carefully, correct the error, and retry.\033[0m"' ERR
 
@@ -98,13 +99,13 @@ create_snapshot() {
 # Update wintarch from git
 update_git() {
     echo -e "\e[32mUpdating wintarch...\e[0m"
-    if ! git -C "$WINTARCH_PATH" pull --autostash; then
+    if ! sudo git -C "$WINTARCH_PATH" pull --autostash; then
         echo -e "\e[31mGit pull failed. Aborting update.\e[0m" >&2
         log "ERROR: git pull failed"
         exit 1
     fi
     # Reset if there are whitespace issues
-    git -C "$WINTARCH_PATH" diff --check || git -C "$WINTARCH_PATH" reset --merge
+    sudo git -C "$WINTARCH_PATH" diff --check || sudo git -C "$WINTARCH_PATH" reset --merge
 }
 
 # Update system packages

@@ -48,8 +48,7 @@ show_status() {
 }
 
 run_migrations() {
-    require_root
-    mkdir -p "$STATE_DIR" "$SKIPPED_DIR"
+    sudo mkdir -p "$STATE_DIR" "$SKIPPED_DIR"
 
     for file in "$WINTARCH_PATH/migrations"/*.sh; do
         [[ -f "$file" ]] || continue
@@ -62,13 +61,13 @@ run_migrations() {
 
         echo -e "\e[32mRunning migration: ${filename%.sh}\e[0m"
 
-        if bash "$file"; then
-            touch "$STATE_DIR/$filename"
+        if sudo bash "$file"; then
+            sudo touch "$STATE_DIR/$filename"
             echo -e "\e[32mMigration completed: ${filename%.sh}\e[0m"
         else
             if command -v gum &>/dev/null; then
                 if gum confirm "Migration ${filename%.sh} failed. Skip and continue?"; then
-                    touch "$SKIPPED_DIR/$filename"
+                    sudo touch "$SKIPPED_DIR/$filename"
                     echo "Skipped: ${filename%.sh}"
                 else
                     echo "Aborting migrations."

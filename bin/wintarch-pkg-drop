@@ -12,8 +12,6 @@ if [[ $# -eq 0 ]]; then
     exit 1
 fi
 
-require_root "$@"
-
 for pkg in "$@"; do
     if pacman -Q "$pkg" &>/dev/null; then
         sudo pacman -Rns --noconfirm "$pkg"
