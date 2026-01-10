@@ -2,9 +2,6 @@
 # lib/archinstall.sh - Generate archinstall JSON config and run archinstall
 # Uses pre_mounted_config mode since we handle partitioning ourselves
 
-# Pinned archinstall version (matching omarchy)
-ARCHINSTALL_VERSION="${ARCHINSTALL_VERSION:-3.0.9-1}"
-
 # --- JSON GENERATION ---
 
 generate_user_config() {
@@ -114,17 +111,26 @@ EOF
 # --- ARCHINSTALL EXECUTION ---
 
 install_archinstall() {
-    log_info "Ensuring archinstall version $ARCHINSTALL_VERSION..."
+    log_info "Ensuring archinstall is properly installed..."
 
-    # Check current version
-    local current_version
-    current_version=$(pacman -Q archinstall 2>/dev/null | awk '{print $2}' || echo "none")
+    # Sync package database first
+    pacman -Sy >> "$LOG_FILE" 2>&1
 
-    if [[ "$current_version" != "$ARCHINSTALL_VERSION" ]]; then
-        log_info "Installing archinstall $ARCHINSTALL_VERSION..."
-        pacman -Sy --noconfirm "archinstall=$ARCHINSTALL_VERSION" >> "$LOG_FILE" 2>&1 || {
-            log_warn "Could not install exact version, using available version"
-            pacman -Sy --noconfirm archinstall >> "$LOG_FILE" 2>&1
+    # Always reinstall archinstall to ensure Python modules match the current Python version
+    # This fixes issues where the ISO's Python was updated but archinstall wasn't rebuilt
+    log_info "Installing archinstall..."
+    if ! pacman -S --noconfirm archinstall >> "$LOG_FILE" 2>&1; then
+        log_warn "pacman -S failed, trying with database refresh..."
+        pacman -Syy --noconfirm archinstall >> "$LOG_FILE" 2>&1 || {
+            die "Failed to install archinstall"
+        }
+    fi
+
+    # Verify archinstall works
+    if ! python -c "import archinstall" >> "$LOG_FILE" 2>&1; then
+        log_warn "archinstall Python module not working, attempting reinstall..."
+        pacman -S --noconfirm --overwrite '*' python archinstall >> "$LOG_FILE" 2>&1 || {
+            die "Failed to fix archinstall Python module"
         }
     fi
 }
