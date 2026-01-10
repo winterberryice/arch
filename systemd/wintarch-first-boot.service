@@ -6,7 +6,7 @@ ConditionPathExists=!/var/lib/wintarch/first-boot-done
 
 [Service]
 Type=oneshot
-ExecStart=/opt/wintarch/bin/wintarch-first-boot
+ExecStart=/opt/wintarch/install/first-boot.sh
 RemainAfterExit=yes
 StandardOutput=journal
 StandardError=journal
