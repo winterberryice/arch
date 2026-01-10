@@ -71,7 +71,7 @@ arch/
 ### Packages (install/archinstall.sh)
 
 Base packages via archinstall JSON:
-- base-devel, git, vim, networkmanager
+- base-devel, git, less, vim, networkmanager
 - snapper, limine, cosmic, cosmic-greeter
 - xdg-desktop-portal-cosmic, power-profiles-daemon
 - firefox, zsh, bluez, bluez-utils

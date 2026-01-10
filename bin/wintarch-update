@@ -4,6 +4,9 @@
 
 set -e
 
+# Disable git pager - not needed for non-interactive updates
+export GIT_PAGER=cat
+
 WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
 
 LOG_DIR="/var/log/wintarch"
