@@ -110,26 +110,18 @@ EOF
 
 # --- ARCHINSTALL EXECUTION ---
 
-install_archinstall() {
-    log_info "Ensuring archinstall is properly installed..."
+verify_archinstall() {
+    # archinstall is pre-installed on the Arch ISO - just verify it works
+    # IMPORTANT: Don't upgrade Python or archinstall, as this can cause version mismatches
+    log_info "Verifying archinstall..."
 
-    # Sync package database first
-    pacman -Sy >> "$LOG_FILE" 2>&1
-
-    # Install archinstall and its dependencies
-    # Note: python-pydantic is a runtime dependency that may not be pulled automatically
-    log_info "Installing archinstall..."
-    if ! pacman -S --noconfirm archinstall python-pydantic >> "$LOG_FILE" 2>&1; then
-        log_warn "pacman -S failed, trying with database refresh..."
-        pacman -Syy --noconfirm archinstall python-pydantic >> "$LOG_FILE" 2>&1 || {
-            die "Failed to install archinstall"
-        }
-    fi
-
-    # Verify archinstall works
     if ! python -c "import archinstall" >> "$LOG_FILE" 2>&1; then
-        die "archinstall Python module still not working after install"
+        log_error "archinstall module not working"
+        python --version >> "$LOG_FILE" 2>&1
+        die "archinstall not available - is this a standard Arch ISO?"
     fi
+
+    log_success "archinstall is ready"
 }
 
 run_archinstall() {
@@ -143,8 +135,8 @@ run_archinstall() {
     generate_user_config "$config_dir/config.json"
     generate_user_credentials "$config_dir/creds.json"
 
-    # Install/update archinstall
-    install_archinstall
+    # Verify archinstall is available (pre-installed on ISO)
+    verify_archinstall
 
     # Show what we're doing
     log_info "Installing base system with archinstall..."
