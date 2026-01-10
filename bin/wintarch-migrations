@@ -5,10 +5,10 @@
 set -e
 
 WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
+source "$WINTARCH_PATH/bin/lib/helpers.sh"
+
 STATE_DIR="/var/lib/wintarch/migrations"
 SKIPPED_DIR="$STATE_DIR/skipped"
-
-mkdir -p "$STATE_DIR" "$SKIPPED_DIR"
 
 show_status() {
     local show_all="${1:-false}"
@@ -48,6 +48,9 @@ show_status() {
 }
 
 run_migrations() {
+    require_root
+    mkdir -p "$STATE_DIR" "$SKIPPED_DIR"
+
     for file in "$WINTARCH_PATH/migrations"/*.sh; do
         [[ -f "$file" ]] || continue
 

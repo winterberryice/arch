@@ -5,6 +5,9 @@
 set -e
 
 WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
+source "$WINTARCH_PATH/bin/lib/helpers.sh"
+
+require_root "$@"
 LOG_DIR="/var/log/wintarch"
 LOG_FILE="$LOG_DIR/update-$(date '+%Y%m%d-%H%M%S').log"
 

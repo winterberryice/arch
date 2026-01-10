@@ -4,6 +4,16 @@
 
 set -e
 
+WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
+source "$WINTARCH_PATH/bin/lib/helpers.sh"
+
+if [[ $# -eq 0 ]]; then
+    echo "Usage: wintarch-pkg-drop <package> [package...]" >&2
+    exit 1
+fi
+
+require_root "$@"
+
 for pkg in "$@"; do
     if pacman -Q "$pkg" &>/dev/null; then
         sudo pacman -Rns --noconfirm "$pkg"
