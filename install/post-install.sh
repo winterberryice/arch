@@ -20,6 +20,7 @@ chroot_run() {
 
 disable_mkinitcpio_hooks() {
     log_info "Disabling mkinitcpio hooks during configuration..."
+    echo >&2
 
     chroot_run "
         if [ -f /usr/share/libalpm/hooks/90-mkinitcpio-install.hook ]; then
@@ -30,13 +31,14 @@ disable_mkinitcpio_hooks() {
             mv /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook \
                /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook.disabled
         fi
-    "
+    " 2>&1 | tee -a "$LOG_FILE" >&2
 
     log_success "mkinitcpio hooks disabled"
 }
 
 enable_mkinitcpio_hooks() {
     log_info "Re-enabling mkinitcpio hooks..."
+    echo >&2
 
     chroot_run "
         if [ -f /usr/share/libalpm/hooks/90-mkinitcpio-install.hook.disabled ]; then
@@ -47,7 +49,7 @@ enable_mkinitcpio_hooks() {
             mv /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook.disabled \
                /usr/share/libalpm/hooks/60-mkinitcpio-remove.hook
         fi
-    "
+    " 2>&1 | tee -a "$LOG_FILE" >&2
 
     log_success "mkinitcpio hooks re-enabled"
 }
@@ -56,6 +58,7 @@ enable_mkinitcpio_hooks() {
 
 configure_mkinitcpio() {
     log_info "Configuring mkinitcpio hooks..."
+    echo >&2
 
     # Create hook configuration for LUKS + BTRFS
     # Note: btrfs-overlayfs is added later if limine-mkinitcpio-hook is installed
@@ -63,7 +66,7 @@ configure_mkinitcpio() {
 # Arch COSMIC Installer - mkinitcpio configuration
 # Hooks for LUKS encrypted BTRFS root
 HOOKS=(base udev keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck)
-EOF"
+EOF" 2>&1 | tee -a "$LOG_FILE" >&2
 
     log_success "mkinitcpio configured"
 }
@@ -72,6 +75,7 @@ EOF"
 
 configure_limine() {
     log_info "Configuring Limine bootloader..."
+    echo >&2
 
     # Get LUKS partition UUID
     local luks_uuid
@@ -80,6 +84,7 @@ configure_limine() {
     local cmdline="cryptdevice=UUID=${luks_uuid}:cryptroot root=/dev/mapper/cryptroot rootflags=subvol=@ rw quiet"
 
     # Create /etc/default/limine configuration
+    echo "Creating /etc/default/limine..." >&2
     chroot_run "cat > /etc/default/limine << EOF
 TARGET_OS_NAME=\"Arch Linux COSMIC\"
 
@@ -100,9 +105,10 @@ BOOT_ORDER=\"*, *fallback, Snapshots\"
 MAX_SNAPSHOT_ENTRIES=5
 
 SNAPSHOT_FORMAT_CHOICE=5
-EOF"
+EOF" 2>&1 | tee -a "$LOG_FILE" >&2
 
     # Create base limine.conf
+    echo "Creating /boot/limine.conf..." >&2
     chroot_run "cat > /boot/limine.conf << 'EOF'
 ### Arch Linux COSMIC - Limine Configuration
 timeout: 5
@@ -119,7 +125,7 @@ term_palette_bright: 414868;f7768e;9ece6a;e0af68;7aa2f7;bb9af7;7dcfff;c0caf5
 term_foreground: c0caf5
 term_foreground_bright: c0caf5
 term_background_bright: 24283b
-EOF"
+EOF" 2>&1 | tee -a "$LOG_FILE" >&2
 
     log_success "Limine configured"
 }
@@ -128,12 +134,16 @@ EOF"
 
 configure_snapper() {
     log_info "Configuring Snapper..."
+    echo >&2
 
     # Create snapper configs for root and home (like omarchy)
-    chroot_run "snapper -c root create-config / 2>/dev/null || true"
-    chroot_run "snapper -c home create-config /home 2>/dev/null || true"
+    echo "Creating snapper config for root..." >&2
+    chroot_run "snapper -c root create-config /" 2>&1 | tee -a "$LOG_FILE" >&2 || true
+    echo "Creating snapper config for home..." >&2
+    chroot_run "snapper -c home create-config /home" 2>&1 | tee -a "$LOG_FILE" >&2 || true
 
     # Configure snapper settings (like omarchy)
+    echo "Configuring snapper settings..." >&2
     chroot_run "
         for config in root home; do
             if [ -f /etc/snapper/configs/\$config ]; then
@@ -149,10 +159,11 @@ configure_snapper() {
                 sed -i 's/^FREE_LIMIT=\"0.2\"/FREE_LIMIT=\"0.3\"/' /etc/snapper/configs/\$config
             fi
         done
-    "
+    " 2>&1 | tee -a "$LOG_FILE" >&2
 
     # Enable btrfs quota for space-aware cleanup
-    chroot_run "btrfs quota enable / 2>/dev/null || true"
+    echo "Enabling btrfs quota..." >&2
+    chroot_run "btrfs quota enable /" 2>&1 | tee -a "$LOG_FILE" >&2 || true
 
     log_success "Snapper configured (root + home)"
 }
@@ -162,6 +173,7 @@ configure_snapper() {
 
 install_aur_helper() {
     log_info "Installing yay AUR helper..."
+    echo >&2
 
     chroot_run "
         # Temporary sudo access for build
@@ -177,7 +189,7 @@ install_aur_helper() {
         # Cleanup
         rm -rf /tmp/yay
         rm -f /etc/sudoers.d/temp-build
-    " >> "$LOG_FILE" 2>&1 || {
+    " 2>&1 | tee -a "$LOG_FILE" >&2 || {
         log_warn "Failed to install yay - skipping AUR packages"
         return 1
     }
@@ -188,10 +200,11 @@ install_aur_helper() {
 
 install_limine_snapper_packages() {
     log_info "Installing Limine-Snapper integration packages from AUR..."
+    echo >&2
 
     # Check if packages exist in official repos first
     if chroot_run "pacman -Ss limine-snapper-sync" &>/dev/null; then
-        chroot_run "pacman -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook" >> "$LOG_FILE" 2>&1
+        chroot_run "pacman -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook" 2>&1 | tee -a "$LOG_FILE" >&2
     else
         # Fall back to AUR
         if ! install_aur_helper; then
@@ -203,21 +216,23 @@ install_limine_snapper_packages() {
             echo '$USERNAME ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/temp-build
             sudo -u '$USERNAME' yay -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook
             rm -f /etc/sudoers.d/temp-build
-        " >> "$LOG_FILE" 2>&1 || {
+        " 2>&1 | tee -a "$LOG_FILE" >&2 || {
             log_warn "Failed to install Limine-Snapper packages"
             return 1
         }
     fi
 
     # Update mkinitcpio hooks to include btrfs-overlayfs
+    echo "Updating mkinitcpio hooks for btrfs-overlayfs..." >&2
     chroot_run "
         if [ -f /usr/lib/initcpio/install/btrfs-overlayfs ]; then
             sed -i 's/^HOOKS=.*/HOOKS=(base udev keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)/' /etc/mkinitcpio.conf.d/arch-cosmic.conf
         fi
-    "
+    " 2>&1 | tee -a "$LOG_FILE" >&2
 
     # Enable the sync service
-    chroot_run "systemctl enable limine-snapper-sync.service 2>/dev/null || true"
+    echo "Enabling limine-snapper-sync service..." >&2
+    chroot_run "systemctl enable limine-snapper-sync.service" 2>&1 | tee -a "$LOG_FILE" >&2 || true
 
     log_success "Limine-Snapper integration installed"
     return 0
@@ -225,6 +240,7 @@ install_limine_snapper_packages() {
 
 install_aur_packages() {
     log_info "Installing AUR packages (brave, vscode)..."
+    echo >&2
 
     # Ensure yay is available
     if ! chroot_run "command -v yay" &>/dev/null; then
@@ -239,7 +255,7 @@ install_aur_packages() {
         chmod 440 /etc/sudoers.d/temp-build
         sudo -u '$USERNAME' yay -S --noconfirm --needed brave-bin visual-studio-code-bin
         rm -f /etc/sudoers.d/temp-build
-    " >> "$LOG_FILE" 2>&1 || {
+    " 2>&1 | tee -a "$LOG_FILE" >&2 || {
         log_warn "Failed to install some AUR packages"
         return 1
     }
@@ -282,19 +298,21 @@ update_limine() {
 
 configure_services() {
     log_info "Enabling system services..."
+    echo >&2
 
     chroot_run "
         systemctl enable NetworkManager.service
         systemctl enable cosmic-greeter.service
         systemctl enable power-profiles-daemon.service 2>/dev/null || true
         systemctl enable bluetooth.service
-    "
+    " 2>&1 | tee -a "$LOG_FILE" >&2
 
     log_success "Services enabled"
 }
 
 configure_locale() {
     log_info "Configuring locale and timezone..."
+    echo >&2
 
     chroot_run "
         # Timezone
@@ -308,15 +326,16 @@ configure_locale() {
 
         # Keyboard
         echo 'KEYMAP=$KEYBOARD' > /etc/vconsole.conf
-    " >> "$LOG_FILE" 2>&1
+    " 2>&1 | tee -a "$LOG_FILE" >&2
 
     log_success "Locale configured"
 }
 
 create_initial_snapshot() {
     log_info "Creating initial snapshots..."
-    chroot_run "snapper -c root create --description 'Fresh Install'" 2>/dev/null || true
-    chroot_run "snapper -c home create --description 'Fresh Install'" 2>/dev/null || true
+    echo >&2
+    chroot_run "snapper -c root create --description 'Fresh Install'" 2>&1 | tee -a "$LOG_FILE" >&2 || true
+    chroot_run "snapper -c home create --description 'Fresh Install'" 2>&1 | tee -a "$LOG_FILE" >&2 || true
     log_success "Initial snapshots created (root + home)"
 }
 
@@ -324,57 +343,58 @@ create_initial_snapshot() {
 
 setup_wintarch() {
     log_info "Setting up wintarch system management..."
+    echo >&2
 
     # Get the repo root (parent of install/ directory)
     local repo_root
     repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
 
     # Copy entire repo to /opt/wintarch/ in the chroot
-    log_info "Copying wintarch to /opt/wintarch/..."
+    echo "Copying wintarch to /opt/wintarch/..." >&2
     mkdir -p "$MOUNT_POINT/opt/wintarch"
-    cp -a "$repo_root/bin" "$MOUNT_POINT/opt/wintarch/"
-    cp -a "$repo_root/migrations" "$MOUNT_POINT/opt/wintarch/"
-    cp -a "$repo_root/version" "$MOUNT_POINT/opt/wintarch/"
+    cp -av "$repo_root/bin" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
+    cp -av "$repo_root/migrations" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
+    cp -av "$repo_root/version" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
     # Also copy install/ for future reference (and potential re-runs)
-    cp -a "$repo_root/install" "$MOUNT_POINT/opt/wintarch/"
+    cp -av "$repo_root/install" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
 
     # Create state directory
-    log_info "Creating wintarch state directory..."
-    chroot_run "mkdir -p /var/lib/wintarch/migrations"
+    echo "Creating wintarch state directory..." >&2
+    chroot_run "mkdir -p /var/lib/wintarch/migrations" 2>&1 | tee -a "$LOG_FILE" >&2
 
     # Mark all existing migrations as completed (fresh install = current state)
-    log_info "Initializing migration state..."
+    echo "Initializing migration state..." >&2
     chroot_run "
         for migration in /opt/wintarch/migrations/*.sh; do
             [ -f \"\$migration\" ] || continue
             touch \"/var/lib/wintarch/migrations/\$(basename \"\$migration\")\"
         done
-    "
+    " 2>&1 | tee -a "$LOG_FILE" >&2
 
     # Copy version to state
-    chroot_run "cp /opt/wintarch/version /var/lib/wintarch/version"
+    chroot_run "cp /opt/wintarch/version /var/lib/wintarch/version" 2>&1 | tee -a "$LOG_FILE" >&2
 
     # Create symlinks in /usr/local/bin/
-    log_info "Creating command symlinks..."
+    echo "Creating command symlinks..." >&2
     chroot_run "
         for cmd in /opt/wintarch/bin/wintarch-*; do
             [ -x \"\$cmd\" ] || continue
             ln -sf \"\$cmd\" \"/usr/local/bin/\$(basename \"\$cmd\")\"
         done
-    "
+    " 2>&1 | tee -a "$LOG_FILE" >&2
 
     # Initialize git repo for updates (if not already a git repo)
     if [[ -d "$repo_root/.git" ]]; then
-        log_info "Copying git repository..."
-        cp -a "$repo_root/.git" "$MOUNT_POINT/opt/wintarch/"
+        echo "Copying git repository..." >&2
+        cp -a "$repo_root/.git" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
     else
-        log_info "Initializing git repository..."
+        echo "Initializing git repository..." >&2
         chroot_run "
             cd /opt/wintarch
             git init
             git add -A
             git commit -m 'Initial wintarch setup'
-        " >> "$LOG_FILE" 2>&1 || true
+        " 2>&1 | tee -a "$LOG_FILE" >&2 || true
     fi
 
     log_success "Wintarch setup complete"
