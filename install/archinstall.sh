@@ -116,22 +116,19 @@ install_archinstall() {
     # Sync package database first
     pacman -Sy >> "$LOG_FILE" 2>&1
 
-    # Always reinstall archinstall to ensure Python modules match the current Python version
-    # This fixes issues where the ISO's Python was updated but archinstall wasn't rebuilt
+    # Install archinstall and its dependencies
+    # Note: python-pydantic is a runtime dependency that may not be pulled automatically
     log_info "Installing archinstall..."
-    if ! pacman -S --noconfirm archinstall >> "$LOG_FILE" 2>&1; then
+    if ! pacman -S --noconfirm archinstall python-pydantic >> "$LOG_FILE" 2>&1; then
         log_warn "pacman -S failed, trying with database refresh..."
-        pacman -Syy --noconfirm archinstall >> "$LOG_FILE" 2>&1 || {
+        pacman -Syy --noconfirm archinstall python-pydantic >> "$LOG_FILE" 2>&1 || {
             die "Failed to install archinstall"
         }
     fi
 
     # Verify archinstall works
     if ! python -c "import archinstall" >> "$LOG_FILE" 2>&1; then
-        log_warn "archinstall Python module not working, attempting reinstall..."
-        pacman -S --noconfirm --overwrite '*' python archinstall >> "$LOG_FILE" 2>&1 || {
-            die "Failed to fix archinstall Python module"
-        }
+        die "archinstall Python module still not working after install"
     fi
 }
 
