@@ -116,11 +116,9 @@ install_archinstall() {
     # Sync package database first
     pacman -Sy >> "$LOG_FILE" 2>&1
 
-    # Debug: Show Python version and paths
-    log_info "Python version: $(python --version 2>&1)"
+    # Debug: Show initial Python version
+    log_info "Initial Python version: $(python --version 2>&1)"
     echo "Python path: $(which python)" >> "$LOG_FILE"
-    echo "Python site-packages:" >> "$LOG_FILE"
-    python -c "import sys; print('\n'.join(sys.path))" >> "$LOG_FILE" 2>&1
 
     # Install archinstall and its dependencies
     # Note: python-pydantic is a runtime dependency that may not be pulled automatically
@@ -134,13 +132,31 @@ install_archinstall() {
         }
     }
 
-    # Debug: Check where archinstall module is installed
+    # Clear shell's cached path to python after potential upgrade
+    hash -r 2>/dev/null || true
+
+    # Debug: Show post-install Python version
+    local python_version
+    python_version=$(/usr/bin/python --version 2>&1)
+    log_info "Post-install Python version: $python_version"
+    echo "Post-install Python path: $(which python)" >> "$LOG_FILE"
+    /usr/bin/python -c "import sys; print('Python sys.path:'); print('\\n'.join(sys.path))" >> "$LOG_FILE" 2>&1
+
+    # Debug: Check where archinstall module is installed (safer glob handling)
     echo "Checking archinstall installation:" >> "$LOG_FILE"
     pacman -Ql archinstall | grep -E "\.py$" | head -5 >> "$LOG_FILE" 2>&1
-    ls -la /usr/lib/python*/site-packages/ 2>/dev/null | head -20 >> "$LOG_FILE"
 
-    # Verify archinstall works
-    if ! python -c "import archinstall" >> "$LOG_FILE" 2>&1; then
+    # List site-packages directories (handle glob carefully to avoid pipefail issues)
+    echo "Site-packages directories:" >> "$LOG_FILE"
+    for dir in /usr/lib/python*/site-packages; do
+        if [[ -d "$dir" ]]; then
+            echo "  $dir" >> "$LOG_FILE"
+        fi
+    done
+
+    # Verify archinstall works using explicit /usr/bin/python path
+    log_info "Verifying archinstall Python module..."
+    if ! /usr/bin/python -c "import archinstall; print(f'archinstall version: {archinstall.__version__}')" >> "$LOG_FILE" 2>&1; then
         log_error "archinstall module not found. Debug info in log file."
         log_info "Attempting to find and fix Python path issue..."
 
@@ -154,7 +170,7 @@ install_archinstall() {
             local installed_pyver
             installed_pyver=$(echo "$archinstall_path" | grep -oP 'python\d+\.\d+')
             log_info "archinstall built for: $installed_pyver"
-            log_info "System Python: $(python --version 2>&1)"
+            log_info "System Python: $python_version"
         fi
 
         die "archinstall Python module not working - likely Python version mismatch on ISO"
