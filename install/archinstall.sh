@@ -110,54 +110,15 @@ EOF
 
 # --- ARCHINSTALL EXECUTION ---
 
-install_archinstall() {
-    log_info "Ensuring archinstall is properly installed..."
+verify_archinstall() {
+    # archinstall is pre-installed on the Arch ISO - just verify it works
+    # IMPORTANT: Don't upgrade Python or archinstall, as this can cause version mismatches
+    log_info "Verifying archinstall..."
 
-    # Sync package database first
-    pacman -Sy >> "$LOG_FILE" 2>&1
-
-    # Debug: Show Python version and paths
-    log_info "Python version: $(python --version 2>&1)"
-    echo "Python path: $(which python)" >> "$LOG_FILE"
-    echo "Python site-packages:" >> "$LOG_FILE"
-    python -c "import sys; print('\n'.join(sys.path))" >> "$LOG_FILE" 2>&1
-
-    # Install archinstall and its dependencies
-    # Note: python-pydantic is a runtime dependency that may not be pulled automatically
-    # We also reinstall python to ensure site-packages are in sync
-    log_info "Installing archinstall and dependencies..."
-    pacman -S --noconfirm --needed python python-pydantic >> "$LOG_FILE" 2>&1
-    pacman -S --noconfirm archinstall >> "$LOG_FILE" 2>&1 || {
-        log_warn "pacman -S failed, trying with database refresh..."
-        pacman -Syy --noconfirm archinstall >> "$LOG_FILE" 2>&1 || {
-            die "Failed to install archinstall"
-        }
-    }
-
-    # Debug: Check where archinstall module is installed
-    echo "Checking archinstall installation:" >> "$LOG_FILE"
-    pacman -Ql archinstall | grep -E "\.py$" | head -5 >> "$LOG_FILE" 2>&1
-    ls -la /usr/lib/python*/site-packages/ 2>/dev/null | head -20 >> "$LOG_FILE"
-
-    # Verify archinstall works
     if ! python -c "import archinstall" >> "$LOG_FILE" 2>&1; then
-        log_error "archinstall module not found. Debug info in log file."
-        log_info "Attempting to find and fix Python path issue..."
-
-        # Find where archinstall is actually installed
-        local archinstall_path
-        archinstall_path=$(find /usr/lib -name "archinstall" -type d 2>/dev/null | grep site-packages | head -1)
-
-        if [[ -n "$archinstall_path" ]]; then
-            log_info "Found archinstall at: $archinstall_path"
-            # Get the Python version from the path
-            local installed_pyver
-            installed_pyver=$(echo "$archinstall_path" | grep -oP 'python\d+\.\d+')
-            log_info "archinstall built for: $installed_pyver"
-            log_info "System Python: $(python --version 2>&1)"
-        fi
-
-        die "archinstall Python module not working - likely Python version mismatch on ISO"
+        log_error "archinstall module not working"
+        python --version >> "$LOG_FILE" 2>&1
+        die "archinstall not available - is this a standard Arch ISO?"
     fi
 
     log_success "archinstall is ready"
@@ -174,8 +135,8 @@ run_archinstall() {
     generate_user_config "$config_dir/config.json"
     generate_user_credentials "$config_dir/creds.json"
 
-    # Install/update archinstall
-    install_archinstall
+    # Verify archinstall is available (pre-installed on ISO)
+    verify_archinstall
 
     # Show what we're doing
     log_info "Installing base system with archinstall..."

@@ -141,12 +141,12 @@ cleanup_mounts() {
 }
 
 catch_errors() {
+    local exit_code=$?  # Capture immediately, before any commands run
+
     if [[ $ERROR_HANDLING == true ]]; then
         return
     fi
     ERROR_HANDLING=true
-
-    local exit_code=$?
     show_cursor
 
     # Cleanup mounts

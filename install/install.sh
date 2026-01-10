@@ -7,9 +7,6 @@
 
 set -eEuo pipefail
 
-# Pinned archinstall version for compatibility
-ARCHINSTALL_VERSION="3.0.14-1"
-
 # Installation paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOUNT_POINT="/mnt/archinstall"
