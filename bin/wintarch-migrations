@@ -5,7 +5,6 @@
 set -e
 
 WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
-source "$WINTARCH_PATH/bin/lib/helpers.sh"
 
 STATE_DIR="/var/lib/wintarch/migrations"
 SKIPPED_DIR="$STATE_DIR/skipped"

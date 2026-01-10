@@ -5,7 +5,6 @@
 set -e
 
 WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
-source "$WINTARCH_PATH/bin/lib/helpers.sh"
 
 COMMAND="$1"
 shift || true
