@@ -1,0 +1,15 @@
+[Unit]
+Description=Wintarch First Boot Configuration
+After=local-fs.target dbus.service
+Before=cosmic-greeter.service display-manager.service
+ConditionPathExists=!/var/lib/wintarch/first-boot-done
+
+[Service]
+Type=oneshot
+ExecStart=/opt/wintarch/install/first-boot.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

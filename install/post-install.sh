@@ -130,42 +130,27 @@ EOF" 2>&1 | tee -a "$LOG_FILE" >&2
     log_success "Limine configured"
 }
 
-# --- SNAPPER CONFIGURATION ---
+# --- FIRST-BOOT SERVICE ---
+# Snapper configuration requires D-Bus which isn't available in chroot.
+# We install a systemd oneshot service that runs on first boot to configure snapper.
 
-configure_snapper() {
-    log_info "Configuring Snapper..."
+install_first_boot_service() {
+    log_info "Installing first-boot service..."
     echo >&2
 
-    # Create snapper configs for root and home (like omarchy)
-    echo "Creating snapper config for root..." >&2
-    chroot_run "snapper -c root create-config /" 2>&1 | tee -a "$LOG_FILE" >&2 || true
-    echo "Creating snapper config for home..." >&2
-    chroot_run "snapper -c home create-config /home" 2>&1 | tee -a "$LOG_FILE" >&2 || true
+    # Get the repo root
+    local repo_root
+    repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-    # Configure snapper settings (like omarchy)
-    echo "Configuring snapper settings..." >&2
-    chroot_run "
-        for config in root home; do
-            if [ -f /etc/snapper/configs/\$config ]; then
-                # Disable timeline snapshots (manual/pacman only)
-                sed -i 's/^TIMELINE_CREATE=\"yes\"/TIMELINE_CREATE=\"no\"/' /etc/snapper/configs/\$config
+    # Copy systemd service file
+    echo "Installing wintarch-first-boot.service..." >&2
+    cp "$repo_root/systemd/wintarch-first-boot.service" \
+       "$MOUNT_POINT/etc/systemd/system/" 2>&1 | tee -a "$LOG_FILE" >&2
 
-                # Limit number of snapshots
-                sed -i 's/^NUMBER_LIMIT=\"50\"/NUMBER_LIMIT=\"5\"/' /etc/snapper/configs/\$config
-                sed -i 's/^NUMBER_LIMIT_IMPORTANT=\"10\"/NUMBER_LIMIT_IMPORTANT=\"5\"/' /etc/snapper/configs/\$config
+    # Enable the service
+    chroot_run "systemctl enable wintarch-first-boot.service" 2>&1 | tee -a "$LOG_FILE" >&2
 
-                # Space limits
-                sed -i 's/^SPACE_LIMIT=\"0.5\"/SPACE_LIMIT=\"0.3\"/' /etc/snapper/configs/\$config
-                sed -i 's/^FREE_LIMIT=\"0.2\"/FREE_LIMIT=\"0.3\"/' /etc/snapper/configs/\$config
-            fi
-        done
-    " 2>&1 | tee -a "$LOG_FILE" >&2
-
-    # Enable btrfs quota for space-aware cleanup
-    echo "Enabling btrfs quota..." >&2
-    chroot_run "btrfs quota enable /" 2>&1 | tee -a "$LOG_FILE" >&2 || true
-
-    log_success "Snapper configured (root + home)"
+    log_success "First-boot service installed (snapper will be configured on first boot)"
 }
 
 # --- AUR PACKAGES ---
@@ -331,14 +316,6 @@ configure_locale() {
     log_success "Locale configured"
 }
 
-create_initial_snapshot() {
-    log_info "Creating initial snapshots..."
-    echo >&2
-    chroot_run "snapper -c root create --description 'Fresh Install'" 2>&1 | tee -a "$LOG_FILE" >&2 || true
-    chroot_run "snapper -c home create --description 'Fresh Install'" 2>&1 | tee -a "$LOG_FILE" >&2 || true
-    log_success "Initial snapshots created (root + home)"
-}
-
 # --- WINTARCH SETUP ---
 
 setup_wintarch() {
@@ -354,6 +331,7 @@ setup_wintarch() {
     mkdir -p "$MOUNT_POINT/opt/wintarch"
     cp -av "$repo_root/bin" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
     cp -av "$repo_root/migrations" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
+    cp -av "$repo_root/systemd" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
     cp -av "$repo_root/version" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
     # Also copy install/ for future reference (and potential re-runs)
     cp -av "$repo_root/install" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
@@ -408,7 +386,9 @@ run_post_install() {
     # Configure components
     configure_mkinitcpio
     configure_limine
-    configure_snapper
+
+    # Install first-boot service (configures snapper on first boot when D-Bus is available)
+    install_first_boot_service
 
     # Install AUR packages for snapshot booting (optional, may fail)
     install_limine_snapper_packages || true
@@ -426,8 +406,7 @@ run_post_install() {
     # Setup wintarch system management
     setup_wintarch
 
-    # Create initial snapshot (after wintarch is set up)
-    create_initial_snapshot
+    # Note: Initial snapshots are created by wintarch-first-boot.service on first boot
 
     log_success "Post-installation complete"
 }
