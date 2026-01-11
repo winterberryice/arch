@@ -4,6 +4,26 @@
 
 set -e
 
+# Required dependencies
+DEPENDENCIES=(zsh git curl)
+
+# Check dependencies before proceeding
+check_dependencies() {
+    local missing=()
+
+    for dep in "${DEPENDENCIES[@]}"; do
+        if ! command -v "$dep" &>/dev/null; then
+            missing+=("$dep")
+        fi
+    done
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        echo "Error: Missing dependencies: ${missing[*]}"
+        echo "Install them with: sudo pacman -S ${missing[*]}"
+        exit 1
+    fi
+}
+
 OMZ_DIR="$HOME/.oh-my-zsh"
 OMZ_CUSTOM="$OMZ_DIR/custom/plugins"
 
@@ -63,12 +83,14 @@ update_plugins() {
 
 # Setup (first run)
 setup() {
+    check_dependencies
     install_omz
     install_plugins
 }
 
 # Update (subsequent runs)
 update() {
+    check_dependencies
     update_omz
     update_plugins
 }
