@@ -51,6 +51,8 @@ arch/
 │   ├── wintarch-pkg-add   # Safe package install
 │   ├── wintarch-pkg-drop  # Safe package removal
 │   └── wintarch-version   # Show version
+├── default/               # Default system configuration
+│   └── plymouth/          # Plymouth boot splash theme (wintarch)
 ├── user/                  # User-level configuration
 │   ├── scripts/           # Setup/update scripts (omz.sh)
 │   ├── dotfiles/          # Managed dotfiles (zshrc, aliases)
@@ -77,7 +79,7 @@ arch/
 
 Base packages via archinstall JSON:
 - base-devel, git, curl, less, vim, networkmanager
-- snapper, limine, cosmic, cosmic-greeter
+- snapper, limine, plymouth, cosmic, cosmic-greeter
 - xdg-desktop-portal-cosmic, power-profiles-daemon
 - firefox, zsh, bluez, bluez-utils
 
@@ -96,7 +98,7 @@ AUR packages via yay (install/post-install.sh):
 ### mkinitcpio Hooks
 
 ```
-HOOKS=(base udev keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)
+HOOKS=(base udev plymouth keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)
 ```
 
 ### mkinitcpio Optimization

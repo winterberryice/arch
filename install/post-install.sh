@@ -62,13 +62,37 @@ configure_mkinitcpio() {
 
     # Create hook configuration for LUKS + BTRFS
     # Note: btrfs-overlayfs is added later if limine-mkinitcpio-hook is installed
+    # Plymouth provides graphical password prompt with visual feedback (dots when typing)
     chroot_run "cat > /etc/mkinitcpio.conf.d/arch-cosmic.conf << 'EOF'
 # Arch COSMIC Installer - mkinitcpio configuration
-# Hooks for LUKS encrypted BTRFS root
-HOOKS=(base udev keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck)
+# Hooks for LUKS encrypted BTRFS root with Plymouth splash
+HOOKS=(base udev plymouth keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck)
 EOF" 2>&1 | tee -a "$LOG_FILE" >&2
 
     log_success "mkinitcpio configured"
+}
+
+# --- PLYMOUTH CONFIGURATION ---
+# Provides graphical boot splash with password prompt showing dots when typing
+
+configure_plymouth() {
+    log_info "Configuring Plymouth theme..."
+    echo >&2
+
+    # Get the repo root
+    local repo_root
+    repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+    # Copy wintarch Plymouth theme to the target system
+    echo "Installing wintarch Plymouth theme..." >&2
+    mkdir -p "$MOUNT_POINT/usr/share/plymouth/themes/wintarch"
+    cp "$repo_root/default/plymouth/"* "$MOUNT_POINT/usr/share/plymouth/themes/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
+
+    # Set wintarch as the default Plymouth theme
+    echo "Setting wintarch as default Plymouth theme..." >&2
+    chroot_run "plymouth-set-default-theme wintarch" 2>&1 | tee -a "$LOG_FILE" >&2
+
+    log_success "Plymouth configured"
 }
 
 # --- LIMINE BOOTLOADER CONFIGURATION ---
@@ -81,7 +105,7 @@ configure_limine() {
     local luks_uuid
     luks_uuid=$(blkid -s UUID -o value "$LUKS_PARTITION")
 
-    local cmdline="cryptdevice=UUID=${luks_uuid}:cryptroot root=/dev/mapper/cryptroot rootflags=subvol=@ rw quiet"
+    local cmdline="cryptdevice=UUID=${luks_uuid}:cryptroot root=/dev/mapper/cryptroot rootflags=subvol=@ rw quiet splash"
 
     # Create /etc/default/limine configuration
     echo "Creating /etc/default/limine..." >&2
@@ -211,7 +235,7 @@ install_limine_snapper_packages() {
     echo "Updating mkinitcpio hooks for btrfs-overlayfs..." >&2
     chroot_run "
         if [ -f /usr/lib/initcpio/install/btrfs-overlayfs ]; then
-            sed -i 's/^HOOKS=.*/HOOKS=(base udev keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)/' /etc/mkinitcpio.conf.d/arch-cosmic.conf
+            sed -i 's/^HOOKS=.*/HOOKS=(base udev plymouth keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)/' /etc/mkinitcpio.conf.d/arch-cosmic.conf
         fi
     " 2>&1 | tee -a "$LOG_FILE" >&2
 
@@ -361,6 +385,7 @@ run_post_install() {
 
     # Configure components
     configure_mkinitcpio
+    configure_plymouth
     configure_limine
 
     # Install first-boot service (configures snapper on first boot when D-Bus is available)

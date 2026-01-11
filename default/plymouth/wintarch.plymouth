@@ -1,0 +1,11 @@
+[Plymouth Theme]
+Name=Wintarch
+Description=Wintarch boot splash with LUKS password prompt
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/wintarch
+ScriptFile=/usr/share/plymouth/themes/wintarch/wintarch.script
+ConsoleLogBackgroundColor=0x1a1b26
+MonospaceFont=Cantarell 11
+Font=Cantarell 11

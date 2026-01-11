@@ -51,6 +51,7 @@ generate_user_config() {
         "networkmanager",
         "snapper",
         "limine",
+        "plymouth",
         "cosmic",
         "cosmic-greeter",
         "xdg-desktop-portal-cosmic",
