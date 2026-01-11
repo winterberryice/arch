@@ -330,6 +330,7 @@ setup_wintarch() {
     echo "Copying wintarch to /opt/wintarch/..." >&2
     mkdir -p "$MOUNT_POINT/opt/wintarch"
     cp -av "$repo_root/bin" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
+    cp -av "$repo_root/user" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
     cp -av "$repo_root/migrations" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
     cp -av "$repo_root/systemd" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
     cp -av "$repo_root/version" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
