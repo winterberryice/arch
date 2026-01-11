@@ -322,20 +322,9 @@ setup_wintarch() {
     log_info "Setting up wintarch system management..."
     echo >&2
 
-    # Get the repo root (parent of install/ directory)
-    local repo_root
-    repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-    # Copy entire repo to /opt/wintarch/ in the chroot
-    echo "Copying wintarch to /opt/wintarch/..." >&2
-    mkdir -p "$MOUNT_POINT/opt/wintarch"
-    cp -av "$repo_root/bin" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
-    cp -av "$repo_root/user" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
-    cp -av "$repo_root/migrations" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
-    cp -av "$repo_root/systemd" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
-    cp -av "$repo_root/version" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
-    # Also copy install/ for future reference (and potential re-runs)
-    cp -av "$repo_root/install" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
+    # Clone wintarch repo
+    echo "Cloning wintarch repository..." >&2
+    chroot_run "git clone https://github.com/winterberryice/arch.git /opt/wintarch" 2>&1 | tee -a "$LOG_FILE" >&2
 
     # Create state directory
     echo "Creating wintarch state directory..." >&2
@@ -361,20 +350,6 @@ setup_wintarch() {
             ln -sf \"\$cmd\" \"/usr/local/bin/\$(basename \"\$cmd\")\"
         done
     " 2>&1 | tee -a "$LOG_FILE" >&2
-
-    # Initialize git repo for updates (if not already a git repo)
-    if [[ -d "$repo_root/.git" ]]; then
-        echo "Copying git repository..." >&2
-        cp -a "$repo_root/.git" "$MOUNT_POINT/opt/wintarch/" 2>&1 | tee -a "$LOG_FILE" >&2
-    else
-        echo "Initializing git repository..." >&2
-        chroot_run "
-            cd /opt/wintarch
-            git init
-            git add -A
-            git commit -m 'Initial wintarch setup'
-        " 2>&1 | tee -a "$LOG_FILE" >&2 || true
-    fi
 
     log_success "Wintarch setup complete"
 }
