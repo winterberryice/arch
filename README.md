@@ -29,7 +29,7 @@ Inspired by [Omarchy](https://github.com/basecamp/omarchy), but with COSMIC inst
 - Vim - Terminal editor
 
 ### Shell & Tools
-- Zsh - Modern shell
+- Zsh + Oh My Zsh - Modern shell with plugins (optional, via `wintarch-user-update`)
 - Git - Version control
 - yay - AUR helper
 
@@ -108,6 +108,13 @@ wintarch-snapshot restore           # Restore from booted snapshot
 wintarch-pkg-add package-name   # Install with verification
 wintarch-pkg-drop package-name  # Remove (no error if missing)
 ```
+
+### User Configuration
+```bash
+wintarch-user-update  # Setup/update user config (Oh My Zsh, dotfiles)
+```
+
+First run installs Oh My Zsh with plugins and sets zsh as default shell. Subsequent runs update OMZ and plugins.
 
 ### Other Commands
 ```bash
