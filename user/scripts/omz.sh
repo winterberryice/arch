@@ -7,7 +7,7 @@ set -e
 # Required dependencies
 DEPENDENCIES=(zsh git curl)
 
-# Check dependencies before proceeding
+# Check and install dependencies before proceeding
 check_dependencies() {
     local missing=()
 
@@ -18,9 +18,8 @@ check_dependencies() {
     done
 
     if [[ ${#missing[@]} -gt 0 ]]; then
-        echo "Error: Missing dependencies: ${missing[*]}"
-        echo "Install them with: sudo pacman -S ${missing[*]}"
-        exit 1
+        echo "Installing missing dependencies: ${missing[*]}"
+        sudo pacman -S --noconfirm "${missing[@]}"
     fi
 }
 
