@@ -6,7 +6,7 @@ Technical documentation for developing and maintaining Wintarch.
 
 - **Phase 1: Installer** - Complete
 - **Phase 2: System Management (wintarch-*)** - Complete
-- **Phase 3: User Configuration** - Planned
+- **Phase 3: User Configuration** - In Progress
 
 ## Architecture
 
@@ -44,12 +44,17 @@ Technical documentation for developing and maintaining Wintarch.
 ```
 arch/
 ├── bin/                   # Wintarch commands (symlinked to /usr/local/bin/)
-│   ├── wintarch-update    # Main update command
+│   ├── wintarch-update    # System update command
+│   ├── wintarch-user-update # User configuration (OMZ, dotfiles)
 │   ├── wintarch-snapshot  # BTRFS snapshot management
 │   ├── wintarch-migrations # Migration runner
 │   ├── wintarch-pkg-add   # Safe package install
 │   ├── wintarch-pkg-drop  # Safe package removal
 │   └── wintarch-version   # Show version
+├── user/                  # User-level configuration
+│   ├── scripts/           # Setup/update scripts (omz.sh)
+│   ├── dotfiles/          # Managed dotfiles (zshrc, aliases)
+│   └── migrations/        # User-level migrations (timestamp-named .sh files)
 ├── install/               # Installer scripts
 │   ├── install.sh         # Main entry point
 │   ├── helpers.sh         # Logging, errors, presentation
@@ -71,7 +76,7 @@ arch/
 ### Packages (install/archinstall.sh)
 
 Base packages via archinstall JSON:
-- base-devel, git, less, vim, networkmanager
+- base-devel, git, curl, less, vim, networkmanager
 - snapper, limine, cosmic, cosmic-greeter
 - xdg-desktop-portal-cosmic, power-profiles-daemon
 - firefox, zsh, bluez, bluez-utils
@@ -165,10 +170,38 @@ vendor/omarchy/install/
 └── login/limine-snapper.sh   # Snapper + Limine config
 ```
 
-## Phase 3: User Configuration (Planned)
+## User Configuration
 
-Future work for per-user configuration:
-- `wintarch-setup` command for first-login user setup
-- Oh My Zsh installation
-- Dotfiles management (`/opt/wintarch/dotfiles/`)
-- Default shell configuration (zsh)
+Per-user configuration separate from system updates. Designed for on-demand use.
+
+### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `wintarch-update` | System updates (packages, migrations). Optionally runs user update. |
+| `wintarch-user-update` | User config (OMZ, dotfiles). Self-bootstrapping on first run. |
+
+### User State
+
+| Path | Purpose |
+|------|---------|
+| `~/.local/state/wintarch/` | Per-user state directory |
+| `~/.local/state/wintarch/user-setup-done` | Marker for first-run completion |
+| `~/.local/state/wintarch/migrations/` | Completed user migration markers |
+| `~/.oh-my-zsh/` | Oh My Zsh installation |
+
+### What `wintarch-user-update` Does
+
+**First run**: Installs OMZ, plugins, configures zshrc, sets zsh as default shell
+**Subsequent runs**: Updates OMZ and plugins
+
+### Dotfiles Strategy
+
+Uses source pattern - user's `~/.zshrc` sources managed config:
+```bash
+# ~/.zshrc
+source /opt/wintarch/user/dotfiles/zshrc  # Managed by wintarch
+# User customizations below...
+```
+
+This allows updates without overwriting user customizations.
