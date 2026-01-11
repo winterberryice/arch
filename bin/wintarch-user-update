@@ -90,6 +90,9 @@ run_setup() {
     # Change shell to zsh
     setup_shell
 
+    # Mark all existing migrations as done (fresh setup = latest state)
+    "$WINTARCH_PATH/user/scripts/migrations.sh" mark-done
+
     # Mark setup complete
     mark_setup_done
 
@@ -105,6 +108,9 @@ run_update() {
 
     # Update OMZ and plugins
     "$WINTARCH_PATH/user/scripts/omz.sh" update
+
+    # Run pending user migrations
+    "$WINTARCH_PATH/user/scripts/migrations.sh" run
 
     echo ""
     info "User update complete!"
