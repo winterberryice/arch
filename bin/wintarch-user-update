@@ -32,7 +32,6 @@ is_first_run() {
 # Setup user zshrc with source pattern
 setup_zshrc() {
     local zshrc="$HOME/.zshrc"
-    local managed_zshrc="$WINTARCH_PATH/user/dotfiles/zshrc"
 
     # Check if already configured
     if [[ -f "$zshrc" ]] && grep -q "source.*wintarch.*zshrc" "$zshrc" 2>/dev/null; then
