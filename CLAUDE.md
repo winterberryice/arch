@@ -53,7 +53,8 @@ arch/
 │   └── wintarch-version   # Show version
 ├── user/                  # User-level configuration
 │   ├── scripts/           # Setup/update scripts (omz.sh)
-│   └── dotfiles/          # Managed dotfiles (zshrc, aliases)
+│   ├── dotfiles/          # Managed dotfiles (zshrc, aliases)
+│   └── migrations/        # User-level migrations (timestamp-named .sh files)
 ├── install/               # Installer scripts
 │   ├── install.sh         # Main entry point
 │   ├── helpers.sh         # Logging, errors, presentation
@@ -186,6 +187,7 @@ Per-user configuration separate from system updates. Designed for on-demand use.
 |------|---------|
 | `~/.local/state/wintarch/` | Per-user state directory |
 | `~/.local/state/wintarch/user-setup-done` | Marker for first-run completion |
+| `~/.local/state/wintarch/migrations/` | Completed user migration markers |
 | `~/.oh-my-zsh/` | Oh My Zsh installation |
 
 ### What `wintarch-user-update` Does
