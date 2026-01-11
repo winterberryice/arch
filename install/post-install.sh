@@ -326,6 +326,9 @@ setup_wintarch() {
     echo "Cloning wintarch repository..." >&2
     chroot_run "git clone https://github.com/winterberryice/arch.git /opt/wintarch" 2>&1 | tee -a "$LOG_FILE" >&2
 
+    # Mark /opt/wintarch as safe for all users (owned by root but accessed by users)
+    chroot_run "git config --system --add safe.directory /opt/wintarch" 2>&1 | tee -a "$LOG_FILE" >&2
+
     # Create state directory
     echo "Creating wintarch state directory..." >&2
     chroot_run "mkdir -p /var/lib/wintarch/migrations" 2>&1 | tee -a "$LOG_FILE" >&2
