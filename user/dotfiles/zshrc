@@ -1,0 +1,15 @@
+# Wintarch managed zsh configuration
+# This file is sourced by ~/.zshrc
+# Do not edit directly - changes may be overwritten by updates
+
+# Oh My Zsh configuration
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="clean"
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+
+# Load Oh My Zsh
+source "$ZSH/oh-my-zsh.sh"
+
+# Wintarch extras
+[[ -f /opt/wintarch/user/dotfiles/zsh/aliases.zsh ]] && source /opt/wintarch/user/dotfiles/zsh/aliases.zsh
+[[ -f /opt/wintarch/user/dotfiles/zsh/wintarch.zsh ]] && source /opt/wintarch/user/dotfiles/zsh/wintarch.zsh
