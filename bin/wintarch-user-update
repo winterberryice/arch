@@ -1,0 +1,123 @@
+#!/bin/bash
+# User-level configuration setup and update
+# Usage: wintarch-user-update
+#
+# First run: Installs OMZ, plugins, configures zshrc, sets shell to zsh
+# Subsequent runs: Updates OMZ and plugins
+
+set -e
+
+WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
+STATE_DIR="$HOME/.local/state/wintarch"
+SETUP_MARKER="$STATE_DIR/user-setup-done"
+
+# Colors
+GREEN='\e[32m'
+YELLOW='\e[33m'
+RESET='\e[0m'
+
+info() {
+    echo -e "${GREEN}$*${RESET}"
+}
+
+warn() {
+    echo -e "${YELLOW}$*${RESET}"
+}
+
+# Check if first run (setup needed)
+is_first_run() {
+    [[ ! -f "$SETUP_MARKER" ]]
+}
+
+# Setup user zshrc with source pattern
+setup_zshrc() {
+    local zshrc="$HOME/.zshrc"
+    local managed_zshrc="$WINTARCH_PATH/user/dotfiles/zshrc"
+
+    # Check if already configured
+    if [[ -f "$zshrc" ]] && grep -q "source.*wintarch.*zshrc" "$zshrc" 2>/dev/null; then
+        echo "zshrc already configured"
+        return 0
+    fi
+
+    # Backup existing zshrc if present
+    if [[ -f "$zshrc" ]]; then
+        cp "$zshrc" "$zshrc.backup.$(date +%Y%m%d-%H%M%S)"
+        warn "Existing .zshrc backed up"
+    fi
+
+    # Create new zshrc that sources our managed config
+    cat > "$zshrc" << 'EOF'
+# Wintarch zsh configuration
+# Source managed configuration (do not remove this line)
+source /opt/wintarch/user/dotfiles/zshrc
+
+# Your customizations below:
+
+EOF
+
+    echo "Created ~/.zshrc with wintarch configuration"
+}
+
+# Change default shell to zsh
+setup_shell() {
+    if [[ "$SHELL" == "/usr/bin/zsh" ]]; then
+        echo "Shell already set to zsh"
+        return 0
+    fi
+
+    info "Changing default shell to zsh..."
+    sudo chsh -s /usr/bin/zsh "$USER"
+    echo "Shell changed to zsh (will take effect on next login)"
+}
+
+# Mark setup as complete
+mark_setup_done() {
+    mkdir -p "$STATE_DIR"
+    touch "$SETUP_MARKER"
+}
+
+# First-time setup
+run_setup() {
+    info "=== Wintarch User Setup ==="
+    echo ""
+
+    # Install OMZ and plugins
+    "$WINTARCH_PATH/user/scripts/omz.sh" setup
+
+    # Configure zshrc
+    setup_zshrc
+
+    # Change shell to zsh
+    setup_shell
+
+    # Mark setup complete
+    mark_setup_done
+
+    echo ""
+    info "User setup complete!"
+    echo "Log out and back in (or run 'zsh') to start using your new shell."
+}
+
+# Update existing configuration
+run_update() {
+    info "=== Wintarch User Update ==="
+    echo ""
+
+    # Update OMZ and plugins
+    "$WINTARCH_PATH/user/scripts/omz.sh" update
+
+    echo ""
+    info "User update complete!"
+}
+
+# Main
+main() {
+    if is_first_run; then
+        run_setup
+    else
+        run_update
+    fi
+}
+
+main "$@"

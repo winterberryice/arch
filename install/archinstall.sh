@@ -45,6 +45,7 @@ generate_user_config() {
     "packages": [
         "base-devel",
         "git",
+        "curl",
         "less",
         "vim",
         "networkmanager",
