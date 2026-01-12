@@ -2,8 +2,8 @@
 # COSMIC desktop setup and update script
 # Called by wintarch-user-update
 #
-# Sets up:
-# - Dock favorites (pinned apps): Brave, VS Code, Files, Terminal, Settings
+# Sets up (first run only):
+# - Dock favorites: Brave, VS Code, Files, Edit, Terminal, Store, Settings
 # - Default web browser: Brave
 
 set -e
@@ -18,7 +18,9 @@ DOCK_FAVORITES=(
     "brave-browser"
     "code"
     "com.system76.CosmicFiles"
+    "com.system76.CosmicEdit"
     "com.system76.CosmicTerm"
+    "com.system76.CosmicStore"
     "com.system76.CosmicSettings"
 )
 
@@ -89,17 +91,11 @@ setup() {
     setup_default_browser
 }
 
-# Update (subsequent runs) - same as setup for now
+# Update (subsequent runs) - no-op to preserve user customizations
 update() {
-    if ! is_cosmic_available; then
-        echo "COSMIC desktop not detected, skipping update"
-        return 0
-    fi
-
-    # Re-apply settings (in case user wants to reset)
-    # Could be made smarter in the future to only update if needed
-    setup_dock_favorites
-    setup_default_browser
+    # Don't overwrite user's dock/browser customizations
+    # Setup is only done on first run
+    :
 }
 
 # Main
