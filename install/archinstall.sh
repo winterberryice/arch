@@ -59,7 +59,13 @@ generate_user_config() {
         "firefox",
         "zsh",
         "bluez",
-        "bluez-utils"
+        "bluez-utils",
+        "fastfetch",
+        "btop",
+        "docker",
+        "docker-buildx",
+        "docker-compose",
+        "mise"
     ],
     "parallel_downloads": 8,
     "profile_config": {
