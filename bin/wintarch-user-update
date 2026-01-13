@@ -84,6 +84,9 @@ run_setup() {
     # Install OMZ and plugins
     "$WINTARCH_PATH/user/scripts/omz.sh" setup
 
+    # Install Claude Code
+    "$WINTARCH_PATH/user/scripts/claude-code.sh" setup
+
     # Configure zshrc
     setup_zshrc
 
@@ -111,6 +114,9 @@ run_update() {
 
     # Update OMZ and plugins
     "$WINTARCH_PATH/user/scripts/omz.sh" update
+
+    # Update Claude Code
+    "$WINTARCH_PATH/user/scripts/claude-code.sh" update
 
     # Update COSMIC desktop configuration
     "$WINTARCH_PATH/user/scripts/cosmic.sh" update

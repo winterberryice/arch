@@ -10,6 +10,9 @@ plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 # Load Oh My Zsh
 source "$ZSH/oh-my-zsh.sh"
 
+# Claude Code
+[[ -d "$HOME/.claude/local/bin" ]] && export PATH="$HOME/.claude/local/bin:$PATH"
+
 # Wintarch extras
 [[ -f /opt/wintarch/user/dotfiles/zsh/aliases.zsh ]] && source /opt/wintarch/user/dotfiles/zsh/aliases.zsh
 [[ -f /opt/wintarch/user/dotfiles/zsh/wintarch.zsh ]] && source /opt/wintarch/user/dotfiles/zsh/wintarch.zsh
