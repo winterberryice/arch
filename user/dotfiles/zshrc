@@ -10,6 +10,11 @@ plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 # Load Oh My Zsh
 source "$ZSH/oh-my-zsh.sh"
 
+# Mise version manager (node, java, python, etc.)
+if command -v mise &> /dev/null; then
+  eval "$(mise activate zsh)"
+fi
+
 # Claude Code
 [[ -d "$HOME/.claude/local/bin" ]] && export PATH="$HOME/.claude/local/bin:$PATH"
 

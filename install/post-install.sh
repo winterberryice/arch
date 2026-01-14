@@ -357,6 +357,47 @@ setup_wintarch() {
     log_success "Wintarch setup complete"
 }
 
+# --- DOCKER SETUP ---
+
+setup_docker() {
+    log_info "Configuring Docker..."
+    echo >&2
+
+    # Create daemon.json for log rotation
+    echo "Creating Docker daemon configuration..." >&2
+    chroot_run "
+        mkdir -p /etc/docker
+        cat > /etc/docker/daemon.json << 'EOF'
+{
+    \"log-driver\": \"json-file\",
+    \"log-opts\": {
+        \"max-size\": \"10m\",
+        \"max-file\": \"5\"
+    }
+}
+EOF
+    " 2>&1 | tee -a "$LOG_FILE" >&2
+
+    # Enable Docker service
+    echo "Enabling Docker service..." >&2
+    chroot_run "systemctl enable docker.service" 2>&1 | tee -a "$LOG_FILE" >&2
+
+    # Boot optimization - prevent Docker from blocking boot
+    echo "Configuring boot optimization..." >&2
+    chroot_run "
+        mkdir -p /etc/systemd/system/docker.service.d
+        cat > /etc/systemd/system/docker.service.d/no-block-boot.conf << 'EOF'
+[Unit]
+# Don't block boot if docker fails to start
+DefaultDependencies=no
+After=network-online.target
+Wants=network-online.target
+EOF
+    " 2>&1 | tee -a "$LOG_FILE" >&2
+
+    log_success "Docker configured"
+}
+
 # --- MAIN POST-INSTALL FLOW ---
 
 run_post_install() {
@@ -384,6 +425,9 @@ run_post_install() {
 
     # Setup wintarch system management
     setup_wintarch
+
+    # Setup Docker
+    setup_docker
 
     # Note: Initial snapshots are created by wintarch-first-boot.service on first boot
 
