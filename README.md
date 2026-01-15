@@ -148,3 +148,37 @@ MIT
 ## Acknowledgments
 
 Inspired by [Omarchy](https://omarchy.org) by DHH.
+
+## Development & Release
+
+This project uses a semi-automated release process managed by a single GitHub Action. A maintainer triggers the process, and the action handles all the repetitive tasks of versioning, merging, and creating the release.
+
+### Release Process
+
+To create a new release, a project maintainer must post a specific comment on an approved pull request. This action triggers a workflow that will automatically merge the PR, bump the version, create a Git tag, and publish a new GitHub Release. Only users with write access to the repository (owners, members, and collaborators) can trigger this workflow.
+
+**1. Comment on the Pull Request**
+
+Use one of the following commands in a comment on the PR you want to release:
+
+-   `/release patch` - For bugfixes and small changes (e.g., v0.1.0 -> v0.1.1).
+-   `/release minor` - For new features (e.g., v0.1.1 -> v0.2.0).
+-   `/release major` - For significant, breaking changes (e.g., v0.2.0 -> v1.0.0).
+
+**2. Specify a Merge Strategy (Optional)**
+
+By default, the action will create a merge commit. To perform a squash merge instead, add the `--squash` flag to your command:
+
+-   `/release patch --squash`
+
+**3. Let the Automation Handle the Rest**
+
+The GitHub Action will perform all the following steps in a single run:
+1.  Merge the pull request using your chosen strategy.
+2.  Bump the version number in the `version` file.
+3.  Create a single, clean commit on the `master` branch (e.g., `chore(release): v0.2.0`).
+4.  Tag that commit.
+5.  Close the pull request with a comment linking to the new release.
+6.  Publish a formal GitHub Release with auto-generated notes.
+
+This workflow uses the repository's default `GITHUB_TOKEN` and does not require any special secrets or setup.
