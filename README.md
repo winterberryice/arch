@@ -151,18 +151,35 @@ Inspired by [Omarchy](https://omarchy.org) by DHH.
 
 ## Development & Release
 
-This project uses an automated release process managed by GitHub Actions.
+This project uses a semi-automated release process managed by GitHub Actions. A maintainer triggers the process, and the action handles the repetitive tasks of versioning and creating the release commit.
 
 ### Release Process
 
 To create a new release, a project maintainer must post a specific comment on an approved pull request. This action triggers a workflow that will automatically merge the PR, bump the version, create a Git tag, and publish a new GitHub Release.
 
-The available commands are:
-- `/release patch` - For bugfixes and small changes (e.g., v0.1.0 -> v0.1.1)
-- `/release minor` - For new features (e.g., v0.1.1 -> v0.2.0)
-- `/release major` - For significant, breaking changes (e.g., v0.2.0 -> v1.0.0)
+**1. Comment on the Pull Request**
 
-The action will handle the entire process, including closing the pull request with a comment linking to the new release.
+Use one of the following commands in a comment on the PR you want to release:
+
+-   `/release patch` - For bugfixes and small changes (e.g., v0.1.0 -> v0.1.1).
+-   `/release minor` - For new features (e.g., v0.1.1 -> v0.2.0).
+-   `/release major` - For significant, breaking changes (e.g., v0.2.0 -> v1.0.0).
+
+**2. Specify a Merge Strategy (Optional)**
+
+By default, the action will create a merge commit. To perform a squash merge instead, add the `--squash` flag to your command:
+
+-   `/release patch --squash`
+
+**3. Let the Automation Handle the Rest**
+
+The GitHub Action will:
+1.  Merge the pull request using your chosen strategy.
+2.  Bump the version number in the `version` file.
+3.  Create a single, clean commit on the `master` branch (e.g., `chore(release): v0.2.0`).
+4.  Tag that commit.
+5.  Close the pull request with a comment linking to the new release.
+6.  A second workflow will see the new tag and publish a formal GitHub Release with auto-generated notes.
 
 ### Setup
 
@@ -176,4 +193,4 @@ For the release workflow to function, a **Personal Access Token (PAT)** must be 
     *   Create a new repository secret named `PAT_TOKEN`.
     *   Paste your PAT as the value.
 
-The `checkout` action in the workflow requires this token to have the necessary permissions to push the version bump commit and the new tag back to the `master` branch.
+The workflow requires this token to have the necessary permissions to push the release commit and the new tag back to the `master` branch.
