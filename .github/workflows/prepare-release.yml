@@ -1,0 +1,83 @@
+name: Prepare Release
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  prepare-release:
+    concurrency:
+      group: release-process
+      cancel-in-progress: false
+    if: |
+      github.event.issue.pull_request &&
+      (
+        github.event.comment.body == '/release patch' ||
+        github.event.comment.body == '/release minor' ||
+        github.event.comment.body == '/release major'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          # This needs to be a PAT with repo write access.
+          # The user must create this secret in the repository settings.
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Get PR branch
+        id: get_pr_branch
+        run: |
+          PR_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "${{ github.event.issue.pull_request.url }}")
+          BRANCH=$(echo "$PR_JSON" | jq -r .head.ref)
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Merge PR branch
+        run: |
+          git fetch origin ${{ steps.get_pr_branch.outputs.branch }}
+          # Use a merge commit to cleanly combine PR changes
+          git merge --no-ff origin/${{ steps.get_pr_branch.outputs.branch }} -m "feat: Merge changes from #${{ github.event.issue.number }}"
+
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          VERSION_STRING=$(cat version)
+          VERSION_NO_V=${VERSION_STRING#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NO_V"
+
+          if [[ "${{ github.event.comment.body }}" == "/release major" ]]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [[ "${{ github.event.comment.body }}" == "/release minor" ]]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+
+          NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
+          echo "$NEW_VERSION" > version
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_version_no_v=$MAJOR.$MINOR.$PATCH" >> $GITHUB_OUTPUT
+
+      - name: Commit, Tag, and Push
+        run: |
+          git add version
+          # Amend the merge commit to include the version bump
+          git commit --amend -m "chore(release): ${{ steps.bump_version.outputs.new_version }}"
+          git tag ${{ steps.bump_version.outputs.new_version }}
+          git push origin master
+          git push origin ${{ steps.bump_version.outputs.new_version }}
+
+      - name: Close Pull Request
+        run: |
+          gh pr close ${{ github.event.issue.number }} --comment "Released in ${{ steps.bump_version.outputs.new_version }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

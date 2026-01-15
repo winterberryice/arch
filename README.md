@@ -148,3 +148,32 @@ MIT
 ## Acknowledgments
 
 Inspired by [Omarchy](https://omarchy.org) by DHH.
+
+## Development & Release
+
+This project uses an automated release process managed by GitHub Actions.
+
+### Release Process
+
+To create a new release, a project maintainer must post a specific comment on an approved pull request. This action triggers a workflow that will automatically merge the PR, bump the version, create a Git tag, and publish a new GitHub Release.
+
+The available commands are:
+- `/release patch` - For bugfixes and small changes (e.g., v0.1.0 -> v0.1.1)
+- `/release minor` - For new features (e.g., v0.1.1 -> v0.2.0)
+- `/release major` - For significant, breaking changes (e.g., v0.2.0 -> v1.0.0)
+
+The action will handle the entire process, including closing the pull request with a comment linking to the new release.
+
+### Setup
+
+For the release workflow to function, a **Personal Access Token (PAT)** must be created and added to the repository's secrets.
+
+1.  **Create a PAT:**
+    *   Go to your GitHub account's **Settings > Developer settings > Personal access tokens (classic)**.
+    *   Generate a new token with the `repo` scope.
+2.  **Add the secret to the repository:**
+    *   In the Wintarch repository, go to **Settings > Secrets and variables > Actions**.
+    *   Create a new repository secret named `PAT_TOKEN`.
+    *   Paste your PAT as the value.
+
+The `checkout` action in the workflow requires this token to have the necessary permissions to push the version bump commit and the new tag back to the `master` branch.
