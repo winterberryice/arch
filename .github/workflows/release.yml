@@ -44,11 +44,13 @@ jobs:
         id: process_release
         run: |
           COMMENT_BODY="${{ github.event.comment.body }}"
-          MERGE_STRATEGY="--no-ff"
+          MERGE_STRATEGY="--squash" # Default to squash
           BUMP_TYPE="patch" # Default to patch
 
-          if [[ "$COMMENT_BODY" == *"--squash"* ]]; then
-            MERGE_STRATEGY="--squash"
+          if [[ "$COMMENT_BODY" == *"--merge-commit"* ]]; then
+            MERGE_STRATEGY="--no-ff"
+          elif [[ "$COMMENT_BODY" == *"--rebase"* ]]; then
+            MERGE_STRATEGY="--rebase"
           fi
 
           if [[ "$COMMENT_BODY" == *"/release major"* ]]; then
@@ -71,28 +73,51 @@ jobs:
           fi
 
           NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
-          echo "$NEW_VERSION" > version
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "merge_strategy=$MERGE_STRATEGY" >> $GITHUB_OUTPUT
 
       - name: Merge, Commit, Tag, and Push
         run: |
-          git fetch origin ${{ steps.get_pr_branch.outputs.branch }}
-          git merge ${{ steps.process_release.outputs.merge_strategy }} origin/${{ steps.get_pr_branch.outputs.branch }} \
-            -m "feat: Merge changes from PR #${{ github.event.issue.number }}"
+          set -e
 
+          MERGE_STRATEGY="${{ steps.process_release.outputs.merge_strategy }}"
+          BRANCH_NAME="${{ steps.get_pr_branch.outputs.branch }}"
+          NEW_VERSION="${{ steps.process_release.outputs.new_version }}"
+          PR_NUMBER="${{ github.event.issue.number }}"
+
+          git fetch origin $BRANCH_NAME
+
+          if [[ "$MERGE_STRATEGY" == "--rebase" ]]; then
+            # Checkout the PR branch
+            git checkout $BRANCH_NAME
+            # Rebase it on top of the master branch
+            git rebase origin/master
+            # Return to the master branch
+            git checkout master
+            # Fast-forward master to the rebased PR branch
+            git merge --ff-only $BRANCH_NAME
+          else
+            # For squash or merge commit, merge directly into master
+            git merge $MERGE_STRATEGY origin/$BRANCH_NAME -m "feat: Merge changes from PR #$PR_NUMBER"
+          fi
+
+          # Now that the merge is complete, update the version file
+          echo "$NEW_VERSION" > version
           git add version
 
-          COMMIT_MSG="chore(release): ${{ steps.process_release.outputs.new_version }}"
-          if [[ "${{ steps.process_release.outputs.merge_strategy }}" == "--squash" ]]; then
+          # Create the final release commit
+          COMMIT_MSG="chore(release): $NEW_VERSION"
+          if [[ "$MERGE_STRATEGY" == "--squash" ]]; then
+            # If squashed, create a new commit
             git commit -m "$COMMIT_MSG"
           else
+            # If rebased or merge-committed, amend the last commit
             git commit --amend -m "$COMMIT_MSG"
           fi
 
-          git tag ${{ steps.process_release.outputs.new_version }}
+          git tag $NEW_VERSION
           git push origin master
-          git push origin ${{ steps.process_release.outputs.new_version }}
+          git push origin $NEW_VERSION
 
       - name: Close Pull Request
         run: |
