@@ -12,7 +12,12 @@ jobs:
   release:
     if: |
       github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, '/release')
+      startsWith(github.event.comment.body, '/release') &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'
+      )
     runs-on: ubuntu-latest
     concurrency:
       group: release-process

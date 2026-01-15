@@ -155,7 +155,7 @@ This project uses a semi-automated release process managed by a single GitHub Ac
 
 ### Release Process
 
-To create a new release, a project maintainer must post a specific comment on an approved pull request. This action triggers a workflow that will automatically merge the PR, bump the version, create a Git tag, and publish a new GitHub Release.
+To create a new release, a project maintainer must post a specific comment on an approved pull request. This action triggers a workflow that will automatically merge the PR, bump the version, create a Git tag, and publish a new GitHub Release. Only users with write access to the repository (owners, members, and collaborators) can trigger this workflow.
 
 **1. Comment on the Pull Request**
 
