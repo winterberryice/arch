@@ -151,7 +151,7 @@ Inspired by [Omarchy](https://omarchy.org) by DHH.
 
 ## Development & Release
 
-This project uses a semi-automated release process managed by GitHub Actions. A maintainer triggers the process, and the action handles the repetitive tasks of versioning and creating the release commit.
+This project uses a semi-automated release process managed by a single GitHub Action. A maintainer triggers the process, and the action handles all the repetitive tasks of versioning, merging, and creating the release.
 
 ### Release Process
 
@@ -173,24 +173,12 @@ By default, the action will create a merge commit. To perform a squash merge ins
 
 **3. Let the Automation Handle the Rest**
 
-The GitHub Action will:
+The GitHub Action will perform all the following steps in a single run:
 1.  Merge the pull request using your chosen strategy.
 2.  Bump the version number in the `version` file.
 3.  Create a single, clean commit on the `master` branch (e.g., `chore(release): v0.2.0`).
 4.  Tag that commit.
 5.  Close the pull request with a comment linking to the new release.
-6.  A second workflow will see the new tag and publish a formal GitHub Release with auto-generated notes.
+6.  Publish a formal GitHub Release with auto-generated notes.
 
-### Setup
-
-For the release workflow to function, a **Personal Access Token (PAT)** must be created and added to the repository's secrets.
-
-1.  **Create a PAT:**
-    *   Go to your GitHub account's **Settings > Developer settings > Personal access tokens (classic)**.
-    *   Generate a new token with the `repo` scope.
-2.  **Add the secret to the repository:**
-    *   In the Wintarch repository, go to **Settings > Secrets and variables > Actions**.
-    *   Create a new repository secret named `PAT_TOKEN`.
-    *   Paste your PAT as the value.
-
-The workflow requires this token to have the necessary permissions to push the release commit and the new tag back to the `master` branch.
+This workflow uses the repository's default `GITHUB_TOKEN` and does not require any special secrets or setup.
