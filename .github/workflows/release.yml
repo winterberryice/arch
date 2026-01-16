@@ -40,12 +40,11 @@ jobs:
           BRANCH=$(echo "$PR_JSON" | jq -r .head.ref)
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
 
-      - name: Process release command and bump version
+      - name: Process release command
         id: process_release
         run: |
           COMMENT_BODY="${{ github.event.comment.body }}"
           MERGE_STRATEGY="--squash" # Default to squash
-          BUMP_TYPE="patch" # Default to patch
 
           if [[ "$COMMENT_BODY" == *"--merge-commit"* ]]; then
             MERGE_STRATEGY="--no-ff"
@@ -53,65 +52,40 @@ jobs:
             MERGE_STRATEGY="--rebase"
           fi
 
-          if [[ "$COMMENT_BODY" == *"/release major"* ]]; then
-            BUMP_TYPE="major"
-          elif [[ "$COMMENT_BODY" == *"/release minor"* ]]; then
-            BUMP_TYPE="minor"
-          fi
-
-          # Version bumping logic
-          VERSION_STRING=$(cat version)
-          VERSION_NO_V=${VERSION_STRING#v}
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NO_V"
-
-          if [[ "$BUMP_TYPE" == "major" ]]; then
-            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0;
-          elif [[ "$BUMP_TYPE" == "minor" ]]; then
-            MINOR=$((MINOR + 1)); PATCH=0;
-          else
-            PATCH=$((PATCH + 1));
-          fi
-
-          NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          # The /release command (without arguments) is now just a trigger.
+          # The version is read from the file after the PR is merged.
           echo "merge_strategy=$MERGE_STRATEGY" >> $GITHUB_OUTPUT
 
       - name: Merge, Commit, Tag, and Push
+        id: release_commit
         run: |
           set -e
 
           MERGE_STRATEGY="${{ steps.process_release.outputs.merge_strategy }}"
           BRANCH_NAME="${{ steps.get_pr_branch.outputs.branch }}"
-          NEW_VERSION="${{ steps.process_release.outputs.new_version }}"
           PR_NUMBER="${{ github.event.issue.number }}"
 
           git fetch origin $BRANCH_NAME
 
+          # Perform the merge
           if [[ "$MERGE_STRATEGY" == "--rebase" ]]; then
-            # Checkout the PR branch
             git checkout $BRANCH_NAME
-            # Rebase it on top of the master branch
             git rebase origin/master
-            # Return to the master branch
             git checkout master
-            # Fast-forward master to the rebased PR branch
             git merge --ff-only $BRANCH_NAME
           else
-            # For squash or merge commit, merge directly into master
             git merge $MERGE_STRATEGY origin/$BRANCH_NAME -m "feat: Merge changes from PR #$PR_NUMBER"
           fi
 
-          # Now that the merge is complete, update the version file
-          echo "$NEW_VERSION" > version
-          git add version
+          # Read the version from the file *after* merging
+          NEW_VERSION=$(cat version)
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
           # Create the final release commit
           COMMIT_MSG="chore(release): $NEW_VERSION"
           if [[ "$MERGE_STRATEGY" == "--squash" ]]; then
-            # If squashed, create a new commit
             git commit -m "$COMMIT_MSG"
           else
-            # If rebased or merge-committed, amend the last commit
             git commit --amend -m "$COMMIT_MSG"
           fi
 
@@ -121,12 +95,12 @@ jobs:
 
       - name: Close Pull Request
         run: |
-          gh pr close ${{ github.event.issue.number }} --comment "Released in ${{ steps.process_release.outputs.new_version }}"
+          gh pr close ${{ github.event.issue.number }} --comment "Released in ${{ steps.release_commit.outputs.new_version }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.process_release.outputs.new_version }}
+          tag_name: ${{ steps.release_commit.outputs.new_version }}
           generate_release_notes: true
