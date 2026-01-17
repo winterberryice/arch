@@ -269,11 +269,24 @@ update_limine() {
         chroot_run "limine-update" 2>&1 | tee -a "$LOG_FILE" >&2 || true
     fi
 
-    # Scan for other bootloaders (e.g., Windows) if limine-scan is available
+    # Auto-detect and add Windows bootloader if limine-scan is available
     if chroot_run "command -v limine-scan" &>/dev/null; then
         log_info "Scanning for other bootloaders (Windows, etc.)..."
-        # Pipe 'yes' to auto-confirm adding detected bootloaders
-        chroot_run "yes | limine-scan" 2>&1 | tee -a "$LOG_FILE" >&2 || true
+
+        # Run limine-scan with 'c' to cancel and capture the boot entry table
+        local scan_output
+        scan_output=$(chroot_run "echo 'c' | limine-scan 2>&1" || true)
+
+        # Look for Windows/Microsoft entries in the output
+        local windows_entry
+        windows_entry=$(echo "$scan_output" | grep -i -E "windows|microsoft" | head -1 | awk '{print $1}' || true)
+
+        if [ -n "$windows_entry" ] && [[ "$windows_entry" =~ ^[0-9]+$ ]]; then
+            echo "Found Windows bootloader at entry $windows_entry, adding to Limine..." >&2
+            chroot_run "echo '$windows_entry' | limine-scan" 2>&1 | tee -a "$LOG_FILE" >&2 || true
+        else
+            echo "No Windows bootloader detected, skipping..." >&2
+        fi
     fi
 
     # Ensure Limine EFI is installed to fallback location
