@@ -184,7 +184,7 @@ install_aur_helper() {
 }
 
 install_limine_snapper_packages() {
-    log_info "Installing Limine-Snapper integration packages from AUR..."
+    log_info "Installing Limine-Snapper integration and entry-tool packages from AUR..."
     echo >&2
 
     # Check if packages exist in official repos first
@@ -199,7 +199,7 @@ install_limine_snapper_packages() {
 
         chroot_run "
             echo '$USERNAME ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/temp-build
-            sudo -u '$USERNAME' yay -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook
+            sudo -u '$USERNAME' yay -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook limine-entry-tool
             rm -f /etc/sudoers.d/temp-build
         " 2>&1 | tee -a "$LOG_FILE" >&2 || {
             log_warn "Failed to install Limine-Snapper packages"
@@ -219,7 +219,7 @@ install_limine_snapper_packages() {
     echo "Enabling limine-snapper-sync service..." >&2
     chroot_run "systemctl enable limine-snapper-sync.service" 2>&1 | tee -a "$LOG_FILE" >&2 || true
 
-    log_success "Limine-Snapper integration installed"
+    log_success "Limine-Snapper integration and entry-tool installed"
     return 0
 }
 
@@ -265,9 +265,15 @@ update_limine() {
 
     # Try limine-update first (from limine-mkinitcpio-hook)
     if chroot_run "command -v limine-update" &>/dev/null; then
-        log_info "Running limine-update (auto-detecting bootloaders)..."
-        # Pipe 'yes' to auto-confirm adding detected bootloaders (e.g., Windows)
-        chroot_run "yes | limine-update" 2>&1 | tee -a "$LOG_FILE" >&2 || true
+        log_info "Running limine-update..."
+        chroot_run "limine-update" 2>&1 | tee -a "$LOG_FILE" >&2 || true
+    fi
+
+    # Scan for other bootloaders (e.g., Windows) if limine-scan is available
+    if chroot_run "command -v limine-scan" &>/dev/null; then
+        log_info "Scanning for other bootloaders (Windows, etc.)..."
+        # Pipe 'yes' to auto-confirm adding detected bootloaders
+        chroot_run "yes | limine-scan" 2>&1 | tee -a "$LOG_FILE" >&2 || true
     fi
 
     # Ensure Limine EFI is installed to fallback location
