@@ -8,6 +8,21 @@ Technical documentation for developing and maintaining Wintarch.
 - **Phase 2: System Management (wintarch-*)** - Complete
 - **Phase 3: User Configuration** - In Progress
 
+## Documentation Structure
+
+**IMPORTANT**: This repo has two audiences with different documentation:
+
+**For end users (people who installed Wintarch)**:
+- [README.md](README.md) - Installation instructions, usage, available commands
+
+**For developers (people working on this repo)**:
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Development workflow, testing, releases, migrations
+- [CLAUDE.md](CLAUDE.md) - This file - Architecture, file structure, implementation details
+
+When adding features or documentation, remember this distinction:
+- User-facing changes (new commands, usage) → Update README.md
+- Developer-facing changes (architecture, implementation) → Update CLAUDE.md or CONTRIBUTING.md
+
 ## Architecture
 
 ```
@@ -65,8 +80,6 @@ arch/
 │   └── post-install.sh    # Limine-snapper setup, wintarch setup
 ├── migrations/            # Wintarch migrations (timestamp-named .sh files)
 ├── version                # Wintarch version (e.g., v0.1.0)
-├── docs/                  # Documentation
-│   └── PHASE2-SPEC.md     # Wintarch system management spec
 ├── test/                  # Test scripts
 └── vendor/                # Vendored dependencies (omarchy reference)
 ```
@@ -121,6 +134,7 @@ We disable mkinitcpio hooks during post-install to avoid multiple rebuilds:
 - Filename format: Unix timestamp (e.g., `1704067200.sh`)
 - Fresh installs mark all existing migrations as completed
 - `wintarch-update` runs pending migrations after package updates
+- See [CONTRIBUTING.md](CONTRIBUTING.md#creating-migrations) for comprehensive migration guide
 
 ## Development
 
