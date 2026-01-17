@@ -84,6 +84,14 @@ run_setup() {
     # Install OMZ and plugins
     "$WINTARCH_PATH/user/scripts/omz.sh" setup
 
+    # Configure git and SSH keys (optional)
+    echo ""
+    if gum confirm "Set up git config and SSH keys?"; then
+        "$WINTARCH_PATH/user/scripts/git-setup.sh"
+    else
+        echo "Skipping git setup"
+    fi
+
     # Install Claude Code
     "$WINTARCH_PATH/user/scripts/claude-code.sh" setup
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+-   **Git and SSH Setup:** Added optional git configuration and SSH key generation to user setup.
+    -   Interactive prompts for git user.name and user.email during first-time setup
+    -   Automatic generation of ed25519 SSH keys with blank password (protected by LUKS encryption)
+    -   Existing SSH keys are automatically backed up before regeneration
+    -   User migration for existing users to opt-in to git/SSH setup
+    -   Accessible via `wintarch-user-update` on fresh installations
+
 ## [0.2.0] - 2026-01-17
 
 ### Added
