@@ -31,8 +31,10 @@ log() {
 get_version_info() {
     CURRENT_VERSION=$(cat /var/lib/wintarch/version 2>/dev/null || echo "unknown")
 
-    # Fetch to check for updates (without pulling)
-    git -C "$WINTARCH_PATH" fetch origin 2>/dev/null || true
+    # Fetch to check for updates (with tags)
+    if ! sudo git -C "$WINTARCH_PATH" fetch origin --tags 2>/dev/null; then
+        echo -e "\e[33mWarning: Could not fetch latest version info from git\e[0m" >&2
+    fi
 
     # Get remote version
     REMOTE_VERSION=$(git -C "$WINTARCH_PATH" show origin/master:version 2>/dev/null || \
