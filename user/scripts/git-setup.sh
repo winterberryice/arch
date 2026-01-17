@@ -1,6 +1,6 @@
 #!/bin/bash
 # Git config and SSH key setup script
-# Called by wintarch-user-update
+# Called by wintarch-user-update and user migrations
 
 set -e
 
@@ -25,37 +25,18 @@ check_dependencies() {
 
 # Configure git user name and email
 configure_git() {
-    local current_name current_email name email
+    echo "Setting up git configuration..."
+    local name email
 
-    current_name=$(git config --global user.name 2>/dev/null || true)
-    current_email=$(git config --global user.email 2>/dev/null || true)
+    name=$(gum input --placeholder "Git user name (e.g., John Doe)")
+    email=$(gum input --placeholder "Git email (e.g., john@example.com)")
 
-    if [[ -n "$current_name" && -n "$current_email" ]]; then
-        echo "Current git configuration:"
-        echo "  Name:  $current_name"
-        echo "  Email: $current_email"
-        echo ""
-
-        if gum confirm "Update git configuration?"; then
-            name=$(gum input --placeholder "Git user name" --value "$current_name")
-            email=$(gum input --placeholder "Git email" --value "$current_email")
-            git config --global user.name "$name"
-            git config --global user.email "$email"
-            echo "Git configuration updated"
-        else
-            echo "Keeping existing git configuration"
-        fi
-    else
-        echo "Setting up git configuration..."
-        name=$(gum input --placeholder "Git user name (e.g., John Doe)")
-        email=$(gum input --placeholder "Git email (e.g., john@example.com)")
-        git config --global user.name "$name"
-        git config --global user.email "$email"
-        echo "Git configuration saved"
-    fi
+    git config --global user.name "$name"
+    git config --global user.email "$email"
+    echo "Git configuration saved"
 }
 
-# Generate or display SSH key
+# Generate SSH key (auto-backup if exists)
 setup_ssh_key() {
     local ssh_dir="$HOME/.ssh"
     local key_path="$ssh_dir/id_ed25519"
@@ -65,74 +46,30 @@ setup_ssh_key() {
     mkdir -p "$ssh_dir"
     chmod 700 "$ssh_dir"
 
+    # Backup existing key if present
     if [[ -f "$key_path" ]]; then
-        echo ""
-        echo "SSH key already exists:"
-        echo "---"
-        cat "$pub_key_path"
-        echo "---"
-        echo ""
-
-        if gum confirm "Generate a NEW SSH key? (old key will be backed up)"; then
-            local backup_path="$ssh_dir/id_ed25519.bak.$(date +%s)"
-            mv "$key_path" "$backup_path"
-            mv "$pub_key_path" "$backup_path.pub"
-            echo "Old key backed up to: $backup_path"
-
-            local email
-            email=$(git config --global user.email 2>/dev/null || echo "")
-            ssh-keygen -t ed25519 -C "$email" -N "" -f "$key_path"
-
-            echo ""
-            echo "New SSH public key (add to GitHub/GitLab):"
-            echo "---"
-            cat "$pub_key_path"
-            echo "---"
-        else
-            echo "Keeping existing SSH key"
-        fi
-    else
-        echo ""
-        echo "Generating SSH key..."
-
-        local email
-        email=$(git config --global user.email 2>/dev/null || echo "")
-        ssh-keygen -t ed25519 -C "$email" -N "" -f "$key_path"
-
-        echo ""
-        echo "SSH public key (add to GitHub/GitLab):"
-        echo "---"
-        cat "$pub_key_path"
-        echo "---"
-        echo ""
-        echo "Key generated with blank password (protected by LUKS encryption)"
+        local backup_path="$ssh_dir/id_ed25519.bak.$(date +%s)"
+        mv "$key_path" "$backup_path"
+        mv "$pub_key_path" "$backup_path.pub"
+        echo "Existing SSH key backed up to: $backup_path"
     fi
-}
 
-# Setup (first run)
-setup() {
-    check_dependencies
-    configure_git
-    setup_ssh_key
-}
+    # Generate new key
+    echo "Generating SSH key..."
+    local email
+    email=$(git config --global user.email 2>/dev/null || echo "")
+    ssh-keygen -t ed25519 -C "$email" -N "" -f "$key_path"
 
-# Update (subsequent runs)
-update() {
-    check_dependencies
-    configure_git
-    setup_ssh_key
+    echo ""
+    echo "SSH public key (add to GitHub/GitLab):"
+    echo "---"
+    cat "$pub_key_path"
+    echo "---"
+    echo ""
+    echo "Key generated with blank password (protected by LUKS encryption)"
 }
 
 # Main
-case "${1:-}" in
-    setup)
-        setup
-        ;;
-    update)
-        update
-        ;;
-    *)
-        echo "Usage: $0 {setup|update}"
-        exit 1
-        ;;
-esac
+check_dependencies
+configure_git
+setup_ssh_key

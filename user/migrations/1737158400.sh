@@ -8,7 +8,7 @@ WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
 
 echo ""
 if command -v gum &>/dev/null && gum confirm "Set up git config and SSH keys?"; then
-    "$WINTARCH_PATH/user/scripts/git-setup.sh" setup
+    "$WINTARCH_PATH/user/scripts/git-setup.sh"
 else
     echo "Skipping git setup"
 fi
