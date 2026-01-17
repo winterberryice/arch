@@ -136,6 +136,46 @@ We disable mkinitcpio hooks during post-install to avoid multiple rebuilds:
 - `wintarch-update` runs pending migrations after package updates
 - See [CONTRIBUTING.md](CONTRIBUTING.md#creating-migrations) for comprehensive migration guide
 
+## Breaking Changes Philosophy
+
+**Core Principle:** Fresh install state must equal updated system state.
+
+Any change that creates divergence between a fresh installation and an updated existing system is considered a **breaking change**, even if existing systems continue to function correctly.
+
+### Examples of Breaking Changes
+
+- **New packages in base install**: Fresh installs have them, existing systems don't
+- **Configuration file changes**: Fresh installs get new config, existing keep old config
+- **Bootloader modifications**: Fresh installs have updated settings, existing don't
+
+### Pre-v1.0 Strategy
+
+Before reaching v1.0, we prioritize rapid development over migration complexity:
+
+- ✅ Breaking changes are **expected and acceptable**
+- ✅ Mark them clearly in CHANGELOG.md with ⚠️ BREAKING CHANGES section
+- ✅ Provide manual migration steps for users who want to match fresh install state
+- ✅ Offer alternative: perform a fresh installation
+- ❌ Do NOT create complex migrations for every breaking change
+
+### Post-v1.0 Commitment
+
+After v1.0, we will maintain strict equivalence:
+
+- All installer changes MUST have corresponding migrations
+- `wintarch-update` MUST bring systems to fresh install state
+- Breaking changes require major version bump (per semver)
+
+### When to Create Migrations Now (Pre-v1.0)
+
+Only create migrations for:
+
+1. **Critical security fixes** that all users must have
+2. **System-breaking changes** that would cause actual failures
+3. **Data loss prevention** where missing the change loses user data
+
+Otherwise, document in CHANGELOG and let users choose manual migration or fresh install.
+
 ## Development
 
 ### Testing
