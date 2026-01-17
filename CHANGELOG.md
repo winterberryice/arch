@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-01-17
+
+### Fixed
+
+-   **Version Detection:** Fixed `wintarch-update` not detecting new versions when they are available.
+    -   Added `--tags` flag to `git fetch` to ensure version tags are fetched
+    -   Added `sudo` for git fetch (repository is root-owned)
+    -   Replaced silent failure with warning message when fetch fails
+    -   Fixes issue where new releases weren't detected until `git pull` ran
+
 ## [0.3.0] - 2026-01-17
 
 ### Added
@@ -123,7 +133,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   **Git Pager:** Prevented `wintarch-update` from failing on minimal systems by setting `GIT_PAGER=cat`.
 -   **Git Ownership:** Fixed "dubious ownership" errors from `git` by adding `/opt/wintarch` to the system's `safe.directory` list during installation.
 
-[unreleased]: https://github.com/winterberryice/arch/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/winterberryice/arch/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/winterberryice/arch/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/winterberryice/arch/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/winterberryice/arch/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/winterberryice/arch/releases/tag/v0.1.0
