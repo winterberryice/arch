@@ -125,14 +125,8 @@ We disable mkinitcpio hooks during post-install to avoid multiple rebuilds:
 The Windows 11-style clipboard manager (win11-clipboard-history-bin) requires access to `/dev/uinput` for paste simulation:
 
 **Requirements:**
-- `uinput` kernel module loaded at boot via `/etc/modules-load.d/uinput.conf`
-- Udev rule at `/etc/udev/rules.d/99-uinput.rules` grants input group access
 - User added to `input` group during installation
-
-**Configuration:**
-```
-KERNEL=="uinput", GROUP="input", MODE="0660", TAG+="uaccess"
-```
+- `uinput` kernel module loaded at boot via `/etc/modules-load.d/uinput.conf`
 
 This allows the clipboard manager to simulate keyboard input for paste operations without requiring root access.
 

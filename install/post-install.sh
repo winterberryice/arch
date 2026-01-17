@@ -255,13 +255,6 @@ configure_clipboard_manager() {
     log_info "Configuring clipboard manager (uinput access)..."
     echo >&2
 
-    # Create udev rule for uinput device access
-    echo "Creating udev rule for /dev/uinput..." >&2
-    chroot_run "cat > /etc/udev/rules.d/99-uinput.rules << 'EOF'
-# Allow input group to access uinput device for clipboard manager
-KERNEL==\"uinput\", GROUP=\"input\", MODE=\"0660\", TAG+=\"uaccess\"
-EOF" 2>&1 | tee -a "$LOG_FILE" >&2
-
     # Add user to input group
     echo "Adding $USERNAME to input group..." >&2
     chroot_run "usermod -aG input $USERNAME" 2>&1 | tee -a "$LOG_FILE" >&2
