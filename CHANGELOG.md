@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-01-17
+
 ### Added
 
 -   **Font Support:** Noto fonts are now included in base installation for comprehensive international character and emoji support.
@@ -110,5 +112,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   **Git Pager:** Prevented `wintarch-update` from failing on minimal systems by setting `GIT_PAGER=cat`.
 -   **Git Ownership:** Fixed "dubious ownership" errors from `git` by adding `/opt/wintarch` to the system's `safe.directory` list during installation.
 
-[unreleased]: https://github.com/winterberryice/arch/compare/v0.1.0...HEAD
+[unreleased]: https://github.com/winterberryice/arch/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/winterberryice/arch/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/winterberryice/arch/releases/tag/v0.1.0
