@@ -66,7 +66,8 @@ arch/
 ├── migrations/            # Wintarch migrations (timestamp-named .sh files)
 ├── version                # Wintarch version (e.g., v0.1.0)
 ├── docs/                  # Documentation
-│   └── PHASE2-SPEC.md     # Wintarch system management spec
+│   ├── PHASE2-SPEC.md     # Wintarch system management spec
+│   └── MIGRATIONS.md      # Migration system documentation
 ├── test/                  # Test scripts
 └── vendor/                # Vendored dependencies (omarchy reference)
 ```
@@ -121,6 +122,7 @@ We disable mkinitcpio hooks during post-install to avoid multiple rebuilds:
 - Filename format: Unix timestamp (e.g., `1704067200.sh`)
 - Fresh installs mark all existing migrations as completed
 - `wintarch-update` runs pending migrations after package updates
+- See [docs/MIGRATIONS.md](docs/MIGRATIONS.md) for comprehensive migration documentation
 
 ## Development
 
