@@ -22,9 +22,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     -   Implemented automatic Windows bootloader detection using `limine-scan` with a two-pass approach (scan → parse → add).
     -   Windows entries are now automatically added to boot menu during installation without user interaction.
 
-> **Note for existing users:** These changes only affect new installations. Existing users can:
-> - Install fonts manually: `pacman -S noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra`
-> - Update Limine config manually: Edit `/boot/limine.conf` and change `default_entry: 1` to `default_entry: 2`, then run `sudo limine-scan` to add Windows
+### ⚠️ BREAKING CHANGES
+
+> **These changes only affect new installations.** Existing systems will diverge from fresh install state unless manually updated.
+>
+> **For existing users who want to match fresh install state:**
+>
+> 1. **Install Noto fonts:**
+>    ```bash
+>    sudo pacman -S noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra
+>    ```
+>
+> 2. **Update Limine configuration (dual-boot only):**
+>    - Edit `/boot/limine.conf` and change `default_entry: 1` to `default_entry: 2`
+>    - Run `sudo limine-scan` and select Windows to add it to the boot menu
+>
+> **Alternatively:** Perform a fresh installation to get all improvements automatically.
+>
+> _Note: Pre-v1.0, we prioritize rapid development over migration scripts. Breaking changes like these are expected._
 
 ## [0.1.0] - 2026-01-16
 
