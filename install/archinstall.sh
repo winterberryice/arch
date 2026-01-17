@@ -65,7 +65,11 @@ generate_user_config() {
         "docker",
         "docker-buildx",
         "docker-compose",
-        "mise"
+        "mise",
+        "noto-fonts",
+        "noto-fonts-cjk",
+        "noto-fonts-emoji",
+        "noto-fonts-extra"
     ],
     "parallel_downloads": 8,
     "profile_config": {
