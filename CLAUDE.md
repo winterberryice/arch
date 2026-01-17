@@ -87,6 +87,12 @@ arch/
 
 ## Key Implementation Details
 
+### User Configuration (install/archinstall.sh)
+
+User created during archinstall with groups:
+- `wheel` - sudo access
+- `input` - access to input devices (required for clipboard manager)
+
 ### Packages (install/archinstall.sh)
 
 Base packages via archinstall JSON:
@@ -125,8 +131,8 @@ We disable mkinitcpio hooks during post-install to avoid multiple rebuilds:
 The Windows 11-style clipboard manager (win11-clipboard-history-bin) requires access to `/dev/uinput` for paste simulation:
 
 **Requirements:**
-- User added to `input` group during installation
-- `uinput` kernel module loaded at boot via `/etc/modules-load.d/uinput.conf`
+- User in `input` group (configured in archinstall user creation)
+- `uinput` kernel module loaded at boot via `/etc/modules-load.d/uinput.conf` (configured in post-install)
 
 This allows the clipboard manager to simulate keyboard input for paste operations without requiring root access.
 

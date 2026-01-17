@@ -252,14 +252,11 @@ install_aur_packages() {
 # --- CLIPBOARD MANAGER SETUP ---
 
 configure_clipboard_manager() {
-    log_info "Configuring clipboard manager (uinput access)..."
+    log_info "Configuring clipboard manager (uinput module)..."
     echo >&2
 
-    # Add user to input group
-    echo "Adding $USERNAME to input group..." >&2
-    chroot_run "usermod -aG input $USERNAME" 2>&1 | tee -a "$LOG_FILE" >&2
-
     # Configure uinput module to load at boot
+    # Note: User is already in 'input' group from archinstall user creation
     echo "Configuring uinput module to load at boot..." >&2
     chroot_run "cat > /etc/modules-load.d/uinput.conf << 'EOF'
 # Load uinput module for clipboard manager
