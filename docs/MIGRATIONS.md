@@ -1,86 +1,221 @@
-# Wintarch Migrations
+# Wintarch Migrations - Implementation Guide
 
-Wintarch uses a migration system to handle system and user-level changes that need to be applied after installation or updates. This document explains how migrations work and how to create them.
+Quick reference for implementing migrations when you need to make system or user-level changes.
 
-## Overview
+## When to Use Migrations
 
-There are two types of migrations in Wintarch:
+Create a migration when you need to:
+- Enable/configure new systemd services
+- Modify system configuration files on existing installations
+- Update user dotfiles or shell configurations
+- Install additional packages or dependencies
+- Fix issues that require changes on already-installed systems
 
-1. **System Migrations** - Applied system-wide, require root privileges
-2. **User Migrations** - Applied per-user, run in user context
+**Don't use migrations for**:
+- Changes that only affect new installations (add to `install/post-install.sh` instead)
+- Package updates (handled by `pacman`/`yay` automatically)
 
-## System Migrations
+## Quick Start
 
-### Location
-- Scripts: `/opt/wintarch/migrations/`
-- State: `/var/lib/wintarch/migrations/`
-- Skipped: `/var/lib/wintarch/migrations/skipped/`
-
-### Management
-System migrations are managed via the `wintarch-migrations` command:
+### System Migration
 
 ```bash
-wintarch-migrations              # Show pending migrations
-wintarch-migrations --status     # Show all migrations (pending, completed, skipped)
-wintarch-migrations --run        # Run pending migrations
+# 1. Create migration file
+timestamp=$(date +%s)
+sudo touch "/opt/wintarch/migrations/$timestamp.sh"
+sudo chmod +x "/opt/wintarch/migrations/$timestamp.sh"
+
+# 2. Edit the file
+sudo vim "/opt/wintarch/migrations/$timestamp.sh"
 ```
 
-### When They Run
-- **During installation**: All existing migrations are marked as completed (`install/post-install.sh`)
-- **During updates**: `wintarch-update` automatically runs pending migrations after package updates
-
-### Creating System Migrations
-
-1. **Filename Format**: Unix timestamp with `.sh` extension
-   ```bash
-   # Get current timestamp
-   date +%s
-   # Example: 1704067200.sh
-   ```
-
-2. **File Location**: Place in `/opt/wintarch/migrations/`
-
-3. **Template**:
-   ```bash
-   #!/bin/bash
-   # Migration: <Short description>
-   # Date: YYYY-MM-DD
-   # Why: <Reason for this migration>
-
-   set -e  # Exit on error
-
-   # Your migration code here
-
-   echo "Migration completed successfully"
-   ```
-
-4. **Best Practices**:
-   - Always use `set -e` to fail fast on errors
-   - Make migrations idempotent (safe to run multiple times)
-   - Check if changes are already applied before making them
-   - Add clear comments explaining what and why
-   - Test migrations in a VM before deploying
-
-### Example System Migration
-
+Template:
 ```bash
 #!/bin/bash
-# Migration: Enable new systemd service for background updates
-# Date: 2024-01-01
-# Why: New feature requires background update checking
+# Migration: Brief description of what this does
+# Date: YYYY-MM-DD
+# Why: Reason for this change
 
-set -e
+set -e  # Exit on error
 
-SERVICE="wintarch-update-check.service"
-TIMER="wintarch-update-check.timer"
+# Your changes here
 
-# Check if service exists
-if ! systemctl list-unit-files | grep -q "$SERVICE"; then
-    echo "Service $SERVICE not found, skipping"
+echo "Migration completed"
+```
+
+### User Migration
+
+Same process, but in `/opt/wintarch/user/migrations/` and runs as user (no sudo in the script).
+
+## File Naming
+
+**Use Unix timestamp**: `date +%s` gives you a sortable, unique filename like `1704067200.sh`
+
+Why timestamps?
+- Automatically sorted chronologically
+- Always unique
+- No version numbering conflicts
+
+## Writing Good Migrations
+
+### 1. Make It Idempotent
+
+**Bad**:
+```bash
+echo "source /opt/wintarch/user/dotfiles/zshrc" >> ~/.zshrc
+systemctl enable myservice.service
+```
+
+**Good**:
+```bash
+# Check before adding
+if ! grep -q "source /opt/wintarch/user/dotfiles/zshrc" ~/.zshrc; then
+    echo "source /opt/wintarch/user/dotfiles/zshrc" >> ~/.zshrc
+fi
+
+# Check if service exists and isn't already enabled
+if systemctl list-unit-files | grep -q "myservice.service"; then
+    if ! systemctl is-enabled myservice.service &>/dev/null; then
+        systemctl enable myservice.service
+    fi
+fi
+```
+
+### 2. Handle Missing Dependencies
+
+```bash
+# Don't assume a file/command exists
+if [[ ! -f /path/to/config ]]; then
+    echo "Config not found, skipping"
     exit 0
 fi
 
-# Enable timer if not already enabled
+if ! command -v some-tool &>/dev/null; then
+    echo "Tool not installed, skipping"
+    exit 0
+fi
+```
+
+### 3. Use set -e
+
+Always add `set -e` at the top so the script fails fast on any error.
+
+### 4. Test Before Deploying
+
+```bash
+# Test system migration manually
+sudo bash /opt/wintarch/migrations/1704067200.sh
+
+# Check status
+wintarch-migrations --status
+```
+
+## Common Patterns
+
+### Check if already done
+```bash
+if [[ -f ~/.config/myapp/migrated ]]; then
+    echo "Already migrated"
+    exit 0
+fi
+```
+
+### Backup before modifying
+```bash
+CONFIG="$HOME/.config/app/config.json"
+if [[ -f "$CONFIG" ]]; then
+    cp "$CONFIG" "$CONFIG.backup-$(date +%s)"
+fi
+```
+
+### Add to config file safely
+```bash
+CONFIG="$HOME/.zshrc"
+LINE="export MY_VAR=value"
+
+if ! grep -qF "$LINE" "$CONFIG"; then
+    echo "$LINE" >> "$CONFIG"
+fi
+```
+
+### Enable systemd service
+```bash
+SERVICE="myapp.service"
+
+if systemctl list-unit-files | grep -q "$SERVICE"; then
+    if ! systemctl is-enabled "$SERVICE" &>/dev/null; then
+        systemctl enable "$SERVICE"
+    fi
+fi
+```
+
+## How Migrations Run
+
+### System Migrations
+- **Command**: `wintarch-migrations --run` (or via `wintarch-update`)
+- **Location**: `/opt/wintarch/migrations/*.sh`
+- **State**: `/var/lib/wintarch/migrations/` (completed) and `skipped/` (skipped)
+- **Runs as**: root
+
+### User Migrations
+- **Command**: `wintarch-user-update` (calls `user/scripts/migrations.sh`)
+- **Location**: `/opt/wintarch/user/migrations/*.sh`
+- **State**: `~/.local/state/wintarch/migrations/` (completed) and `skipped/` (skipped)
+- **Runs as**: regular user
+
+### On Fresh Install
+All existing migrations are automatically marked as completed during `install/post-install.sh`. Only migrations created *after* installation will run.
+
+## Troubleshooting
+
+### Migration Failed
+```bash
+# Run manually to see error details
+sudo bash /opt/wintarch/migrations/1704067200.sh
+
+# Fix the script and run migrations again
+wintarch-migrations --run
+```
+
+### Retry a Skipped Migration
+```bash
+# Remove skip marker
+sudo rm /var/lib/wintarch/migrations/skipped/1704067200.sh
+
+# Run again
+wintarch-migrations --run
+```
+
+### Check Migration Status
+```bash
+# System migrations
+wintarch-migrations --status
+
+# Shows:
+# - Pending (will run next)
+# - Completed (already done)
+# - Skipped (failed and user chose to skip)
+```
+
+## Real Examples
+
+### Example 1: Enable New Service
+
+```bash
+#!/bin/bash
+# Migration: Enable wintarch-update-check timer
+# Date: 2024-01-15
+# Why: New auto-update feature needs background timer
+
+set -e
+
+TIMER="wintarch-update-check.timer"
+
+if ! systemctl list-unit-files | grep -q "$TIMER"; then
+    echo "Timer not found, skipping"
+    exit 0
+fi
+
 if ! systemctl is-enabled "$TIMER" &>/dev/null; then
     systemctl enable "$TIMER"
     echo "Enabled $TIMER"
@@ -88,276 +223,95 @@ else
     echo "$TIMER already enabled"
 fi
 
-echo "Migration completed successfully"
+echo "Migration completed"
 ```
 
-## User Migrations
-
-### Location
-- Scripts: `/opt/wintarch/user/migrations/`
-- State: `~/.local/state/wintarch/migrations/`
-- Skipped: `~/.local/state/wintarch/migrations/skipped/`
-
-### Management
-User migrations are managed via `user/scripts/migrations.sh`:
-
-```bash
-# These are called by wintarch-user-update, not directly
-migrations.sh status      # Show all migrations
-migrations.sh run         # Run pending migrations
-migrations.sh mark-done   # Mark all as completed (fresh setup)
-```
-
-### When They Run
-- **First run of wintarch-user-update**: All existing migrations are marked as completed
-- **Subsequent runs**: `wintarch-user-update` runs pending migrations after Oh My Zsh updates
-
-### Creating User Migrations
-
-1. **Filename Format**: Same as system migrations - Unix timestamp with `.sh` extension
-
-2. **File Location**: Place in `/opt/wintarch/user/migrations/`
-
-3. **Template**:
-   ```bash
-   #!/bin/bash
-   # User Migration: <Short description>
-   # Date: YYYY-MM-DD
-   # Why: <Reason for this migration>
-
-   set -e  # Exit on error
-
-   # Your migration code here (runs as user, not root)
-
-   echo "User migration completed successfully"
-   ```
-
-4. **Best Practices**:
-   - No sudo commands (runs in user context)
-   - Make migrations idempotent
-   - Check if user files/configs already exist
-   - Use `$HOME` instead of hardcoded paths
-   - Safe for multiple users on same system
-
-### Example User Migration
+### Example 2: Update User Config (User Migration)
 
 ```bash
 #!/bin/bash
-# User Migration: Add new zsh plugin to user configuration
-# Date: 2024-01-15
-# Why: New syntax highlighting plugin improves shell experience
+# User Migration: Add zsh-syntax-highlighting plugin
+# Date: 2024-01-20
+# Why: Better shell experience for all users
 
 set -e
 
 PLUGIN_DIR="$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
 
-# Check if plugin already installed
 if [[ -d "$PLUGIN_DIR" ]]; then
     echo "Plugin already installed"
     exit 0
 fi
 
-# Clone plugin
+if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+    echo "Oh My Zsh not installed, skipping"
+    exit 0
+fi
+
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$PLUGIN_DIR"
 
-echo "User migration completed successfully"
+echo "User migration completed"
 ```
 
-## Migration Workflow
+### Example 3: Fix Config File
 
-### System Migration Flow
-```
-wintarch-update
-    ↓
-Package updates
-    ↓
-wintarch-migrations --run
-    ↓
-For each migration in /opt/wintarch/migrations/*.sh:
-    ├─ Already completed? → Skip
-    ├─ Already skipped? → Skip
-    └─ Run migration
-        ├─ Success → Mark completed
-        └─ Failure → Prompt to skip or abort
-```
-
-### User Migration Flow
-```
-wintarch-user-update
-    ↓
-First run? → Mark all existing migrations complete
-    ↓
-Oh My Zsh updates
-    ↓
-user/scripts/migrations.sh run
-    ↓
-For each migration in /opt/wintarch/user/migrations/*.sh:
-    ├─ Already completed? → Skip
-    ├─ Already skipped? → Skip
-    └─ Run migration
-        ├─ Success → Mark completed
-        └─ Failure → Prompt to skip or abort
-```
-
-## State Management
-
-### Completed Migrations
-When a migration runs successfully, a marker file is created:
-- System: `/var/lib/wintarch/migrations/<timestamp>.sh`
-- User: `~/.local/state/wintarch/migrations/<timestamp>.sh`
-
-### Skipped Migrations
-If a migration fails and the user chooses to skip it:
-- System: `/var/lib/wintarch/migrations/skipped/<timestamp>.sh`
-- User: `~/.local/state/wintarch/migrations/skipped/<timestamp>.sh`
-
-### Fresh Installations
-During installation (`install/post-install.sh`), all existing migrations are marked as completed. This prevents new installations from running historical migrations that are only relevant for upgrades from older versions.
-
-## Common Patterns
-
-### Checking if a Command Exists
 ```bash
-if command -v some-command &>/dev/null; then
-    # Command exists
+#!/bin/bash
+# Migration: Fix mkinitcpio hooks order
+# Date: 2024-02-01
+# Why: btrfs-overlayfs must come after filesystems
+
+set -e
+
+CONFIG="/etc/mkinitcpio.conf"
+BACKUP="$CONFIG.backup-$(date +%s)"
+
+if [[ ! -f "$CONFIG" ]]; then
+    echo "Config not found"
+    exit 0
 fi
-```
 
-### Checking if a File Exists
-```bash
-if [[ -f /path/to/file ]]; then
-    # File exists
+# Check if fix is already applied
+if grep -q "HOOKS=.*filesystems.*btrfs-overlayfs" "$CONFIG"; then
+    echo "Already fixed"
+    exit 0
 fi
-```
 
-### Making Changes Idempotent
-```bash
-# Bad: Always appends
-echo "source /some/file" >> ~/.zshrc
+# Backup
+cp "$CONFIG" "$BACKUP"
 
-# Good: Check first
-if ! grep -q "source /some/file" ~/.zshrc; then
-    echo "source /some/file" >> ~/.zshrc
-fi
-```
+# Fix the order (example - adjust regex as needed)
+sed -i 's/HOOKS=\(.*btrfs-overlayfs.*filesystems.*\)/HOOKS=\1/' "$CONFIG"
 
-### Backing Up Files
-```bash
-CONFIG_FILE="$HOME/.config/some-app/config"
+# Rebuild initramfs
+mkinitcpio -P
 
-if [[ -f "$CONFIG_FILE" ]]; then
-    cp "$CONFIG_FILE" "$CONFIG_FILE.backup-$(date +%s)"
-fi
-```
-
-### Conditional Changes Based on System State
-```bash
-# Only run if service exists
-if systemctl list-unit-files | grep -q "myservice.service"; then
-    systemctl enable myservice.service
-fi
-```
-
-## Testing Migrations
-
-### System Migrations
-```bash
-# Test in a VM or container
-sudo bash /opt/wintarch/migrations/1704067200.sh
-
-# Check state
-wintarch-migrations --status
-```
-
-### User Migrations
-```bash
-# Test as regular user
-bash /opt/wintarch/user/migrations/1704067200.sh
-
-# Check state (via wintarch-user-update)
-wintarch-user-update --dry-run  # If such flag exists
-```
-
-## Troubleshooting
-
-### Migration Failed
-1. Check the migration script for errors
-2. Run manually to see detailed output:
-   ```bash
-   sudo bash /opt/wintarch/migrations/<timestamp>.sh
-   ```
-3. Fix the issue and run again
-4. Or skip the migration if it's no longer relevant
-
-### Migration Stuck in Skipped State
-Remove the skip marker to retry:
-```bash
-# System migration
-sudo rm /var/lib/wintarch/migrations/skipped/<timestamp>.sh
-
-# User migration
-rm ~/.local/state/wintarch/migrations/skipped/<timestamp>.sh
-```
-
-Then run migrations again:
-```bash
-# System
-wintarch-migrations --run
-
-# User
-wintarch-user-update
+echo "Migration completed"
 ```
 
 ## Development Workflow
 
-When developing new features that require migration:
+When building a feature that needs migration:
 
-1. **Create the migration script** with proper timestamp
-2. **Test in VM** to ensure it works
-3. **Commit together** with the feature that requires it
-4. **Document** in commit message that migration is required
+1. **Develop feature** in your branch
+2. **Create migration** with `date +%s`
+3. **Test migration** manually in VM
+4. **Commit together** - feature code + migration in same commit
+5. **Document in commit message** that migration is included
 
-### Helper for Creating Migrations
+Example commit message:
+```
+feat: Add automatic update checking
 
-While there's no official tool yet, you can use this snippet:
-
-```bash
-# Create system migration
-timestamp=$(date +%s)
-cat > "/opt/wintarch/migrations/$timestamp.sh" <<'EOF'
-#!/bin/bash
-# Migration: <description>
-# Date: $(date +%Y-%m-%d)
-# Why: <reason>
-
-set -e
-
-# Your migration code here
-
-echo "Migration completed successfully"
-EOF
-chmod +x "/opt/wintarch/migrations/$timestamp.sh"
+- Add wintarch-update-check service and timer
+- Includes migration (1704067200.sh) to enable timer on existing systems
+- Timer runs daily at 2am to check for updates
 ```
 
-## Best Practices Summary
+## Summary
 
-1. ✅ **Use timestamps** for filenames (sortable, unique)
-2. ✅ **Make idempotent** - safe to run multiple times
-3. ✅ **Add comments** - explain what and why
-4. ✅ **Use `set -e`** - fail fast on errors
-5. ✅ **Test in VM** before deploying
-6. ✅ **Check before changing** - don't assume state
-7. ✅ **Backup before modifying** critical files
-8. ❌ **Don't hardcode paths** - use variables
-9. ❌ **Don't skip error handling** - handle failures gracefully
-10. ❌ **Don't make irreversible changes** without confirmation
-
-## Future Improvements
-
-Potential enhancements to the migration system:
-
-- **Rollback support** - Ability to undo migrations
-- **Migration generator** - Tool to create migration templates
-- **Dry-run mode** - Preview what migrations will do
-- **Migration versioning** - Track which version introduced each migration
-- **Better error reporting** - Detailed logs of migration failures
+- **Timestamp filenames**: `date +%s`
+- **Idempotent**: Check before changing
+- **set -e**: Fail fast
+- **Test manually**: Before committing
+- **Fresh installs skip**: Migrations auto-marked complete on new installs

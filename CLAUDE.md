@@ -66,8 +66,7 @@ arch/
 ├── migrations/            # Wintarch migrations (timestamp-named .sh files)
 ├── version                # Wintarch version (e.g., v0.1.0)
 ├── docs/                  # Documentation
-│   ├── PHASE2-SPEC.md     # Wintarch system management spec
-│   └── MIGRATIONS.md      # Migration system documentation
+│   └── MIGRATIONS.md      # Migration system guide
 ├── test/                  # Test scripts
 └── vendor/                # Vendored dependencies (omarchy reference)
 ```
