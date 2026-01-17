@@ -10,7 +10,6 @@ set -e
 WINTARCH_PATH="${WINTARCH_PATH:-/opt/wintarch}"
 STATE_DIR="$HOME/.local/state/wintarch"
 SETUP_MARKER="$STATE_DIR/user-setup-done"
-GIT_SETUP_MARKER="$STATE_DIR/git-setup-done"
 
 # Colors
 GREEN='\e[32m'
@@ -77,25 +76,6 @@ mark_setup_done() {
     touch "$SETUP_MARKER"
 }
 
-# Conditionally run git setup (ask user first)
-setup_git_if_wanted() {
-    if [[ -f "$GIT_SETUP_MARKER" ]]; then
-        # Already prompted before, don't ask again
-        return 0
-    fi
-
-    echo ""
-    if command -v gum &>/dev/null && gum confirm "Set up git config and SSH keys?"; then
-        "$WINTARCH_PATH/user/scripts/git-setup.sh" setup
-    else
-        echo "Skipping git setup"
-    fi
-
-    # Mark as done regardless of choice (so we don't ask again)
-    mkdir -p "$STATE_DIR"
-    touch "$GIT_SETUP_MARKER"
-}
-
 # First-time setup
 run_setup() {
     info "=== Wintarch User Setup ==="
@@ -104,8 +84,13 @@ run_setup() {
     # Install OMZ and plugins
     "$WINTARCH_PATH/user/scripts/omz.sh" setup
 
-    # Configure git and SSH keys (ask first)
-    setup_git_if_wanted
+    # Configure git and SSH keys (optional)
+    echo ""
+    if gum confirm "Set up git config and SSH keys?"; then
+        "$WINTARCH_PATH/user/scripts/git-setup.sh" setup
+    else
+        echo "Skipping git setup"
+    fi
 
     # Install Claude Code
     "$WINTARCH_PATH/user/scripts/claude-code.sh" setup
@@ -137,9 +122,6 @@ run_update() {
 
     # Update OMZ and plugins
     "$WINTARCH_PATH/user/scripts/omz.sh" update
-
-    # Git setup migration (only prompts once if never done before)
-    setup_git_if_wanted
 
     # Update Claude Code
     "$WINTARCH_PATH/user/scripts/claude-code.sh" update
