@@ -431,31 +431,46 @@ wintarch-migrations --status
 
 ## Release Process
 
-This project uses a semi-automated release process managed by a GitHub Action. A maintainer triggers the process by commenting on an approved pull request, and the action handles versioning, merging, and creating the release.
+This project uses a semi-automated release process managed by a GitHub Action. The version is set manually in the `version` file, then a maintainer triggers the release by commenting on an approved pull request.
 
 ### How to Release
 
 Only users with write access can trigger releases.
 
-**1. Comment on the PR**
+**1. Update the version file**
 
-Use one of these commands:
-- `/release patch` - Bugfixes (v0.1.0 → v0.1.1)
-- `/release minor` - New features (v0.1.1 → v0.2.0)
-- `/release major` - Breaking changes (v0.2.0 → v1.0.0)
+In your PR, update the `version` file with the new version:
+```bash
+# For bugfixes: v0.1.0 → v0.1.1
+echo "v0.1.1" > version
 
-**2. Optional: Squash merge**
+# For new features: v0.1.1 → v0.2.0
+echo "v0.2.0" > version
 
-Add `--squash` flag:
-- `/release patch --squash`
+# For breaking changes: v0.2.0 → v1.0.0
+echo "v1.0.0" > version
+```
 
-**3. Automation runs**
+Commit this change as part of your PR.
+
+**2. Get PR approved**
+
+Ensure the PR is reviewed and approved.
+
+**3. Comment on the PR**
+
+Post a `/release` comment on the approved PR. Optionally specify merge strategy:
+- `/release` - Default (squash merge)
+- `/release --merge-commit` - Create merge commit
+- `/release --rebase` - Rebase and fast-forward
+
+**4. Automation runs**
 
 The GitHub Action will:
-1. Merge the PR
-2. Bump version in `version` file
+1. Merge the PR using your chosen strategy
+2. Read version from the `version` file
 3. Create commit: `chore(release): v0.2.0`
-4. Tag the commit
+4. Tag the commit with the version
 5. Publish GitHub Release with auto-generated notes
 6. Close PR with link to release
 
@@ -463,6 +478,7 @@ The GitHub Action will:
 
 - Version stored in `version` file at repo root
 - Follows semantic versioning (MAJOR.MINOR.PATCH)
+- Must be updated manually in PRs before release
 - Displayed to users via `wintarch-version` command
 
 ## Code Style
