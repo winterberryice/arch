@@ -184,7 +184,7 @@ install_aur_helper() {
 }
 
 install_limine_snapper_packages() {
-    log_info "Installing Limine-Snapper integration and entry-tool packages from AUR..."
+    log_info "Installing Limine-Snapper integration packages from AUR..."
     echo >&2
 
     # Check if packages exist in official repos first
@@ -199,7 +199,7 @@ install_limine_snapper_packages() {
 
         chroot_run "
             echo '$USERNAME ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/temp-build
-            sudo -u '$USERNAME' yay -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook limine-entry-tool
+            sudo -u '$USERNAME' yay -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook
             rm -f /etc/sudoers.d/temp-build
         " 2>&1 | tee -a "$LOG_FILE" >&2 || {
             log_warn "Failed to install Limine-Snapper packages"
@@ -219,7 +219,7 @@ install_limine_snapper_packages() {
     echo "Enabling limine-snapper-sync service..." >&2
     chroot_run "systemctl enable limine-snapper-sync.service" 2>&1 | tee -a "$LOG_FILE" >&2 || true
 
-    log_success "Limine-Snapper integration and entry-tool installed"
+    log_success "Limine-Snapper integration installed"
     return 0
 }
 
