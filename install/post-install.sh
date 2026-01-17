@@ -112,7 +112,7 @@ EOF" 2>&1 | tee -a "$LOG_FILE" >&2
     chroot_run "cat > /boot/limine.conf << 'EOF'
 ### Arch Linux COSMIC - Limine Configuration
 timeout: 5
-default_entry: 1
+default_entry: 2
 interface_branding: Arch Linux COSMIC
 interface_branding_color: 2
 hash_mismatch_panic: no
@@ -265,8 +265,9 @@ update_limine() {
 
     # Try limine-update first (from limine-mkinitcpio-hook)
     if chroot_run "command -v limine-update" &>/dev/null; then
-        log_info "Running limine-update..."
-        chroot_run "limine-update" 2>&1 | tee -a "$LOG_FILE" >&2 || true
+        log_info "Running limine-update (auto-detecting bootloaders)..."
+        # Pipe 'yes' to auto-confirm adding detected bootloaders (e.g., Windows)
+        chroot_run "yes | limine-update" 2>&1 | tee -a "$LOG_FILE" >&2 || true
     fi
 
     # Ensure Limine EFI is installed to fallback location
