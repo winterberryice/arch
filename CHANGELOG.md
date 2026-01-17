@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     -   `noto-fonts-emoji`: Color emoji support
     -   `noto-fonts-extra`: Additional font variants
 
+-   **Clipboard Manager:** Windows 11-style clipboard history manager with paste simulation support.
+    -   `win11-clipboard-history-bin`: Modern clipboard manager with visual history
+    -   User added to `input` group for input device access
+    -   `uinput` kernel module configured to load at boot for paste functionality
+
 ### Changed
 
 -   **Dual-Boot Improvements:** Enhanced Limine bootloader configuration for better dual-boot experience.
@@ -33,7 +38,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 >    sudo pacman -S noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra
 >    ```
 >
-> 2. **Update Limine configuration (dual-boot only):**
+> 2. **Install clipboard manager and configure access:**
+>    ```bash
+>    # Install the AUR package
+>    yay -S win11-clipboard-history-bin
+>
+>    # Add your user to input group
+>    sudo usermod -aG input $USER
+>
+>    # Configure uinput module to load at boot
+>    echo 'uinput' | sudo tee /etc/modules-load.d/uinput.conf
+>
+>    # Load the module now
+>    sudo modprobe uinput
+>
+>    # Log out and back in for group changes to take effect
+>    ```
+>
+> 3. **Update Limine configuration (dual-boot only):**
 >    - Edit `/boot/limine.conf` and change `default_entry: 1` to `default_entry: 2`
 >    - Run `sudo limine-scan` and select Windows to add it to the boot menu
 >

@@ -107,7 +107,7 @@ generate_user_credentials() {
     "users": [
         {
             "enc_password": $password_hash_escaped,
-            "groups": ["wheel"],
+            "groups": ["wheel", "input"],
             "sudo": true,
             "username": $username_escaped
         }

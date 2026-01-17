@@ -49,7 +49,8 @@ When adding features or documentation, remember this distinction:
 │  4. POST-INSTALL (chroot)                                       │
 │     - mkinitcpio with encrypt + btrfs-overlayfs hooks           │
 │     - Limine bootloader configuration                           │
-│     - Snapper setup, AUR packages (yay, brave, vscode)          │
+│     - Snapper, AUR packages (brave, vscode, clipboard-manager)  │
+│     - Clipboard manager setup (uinput, input group)             │
 │     - Wintarch setup (/opt/wintarch/, symlinks, state)          │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -86,6 +87,12 @@ arch/
 
 ## Key Implementation Details
 
+### User Configuration (install/archinstall.sh)
+
+User created during archinstall with groups:
+- `wheel` - sudo access
+- `input` - access to input devices (required for clipboard manager)
+
 ### Packages (install/archinstall.sh)
 
 Base packages via archinstall JSON:
@@ -96,7 +103,7 @@ Base packages via archinstall JSON:
 
 AUR packages via yay (install/post-install.sh):
 - limine-snapper-sync, limine-mkinitcpio-hook
-- brave-bin, visual-studio-code-bin
+- brave-bin, visual-studio-code-bin, win11-clipboard-history-bin
 
 ### Services Enabled
 
@@ -118,6 +125,16 @@ We disable mkinitcpio hooks during post-install to avoid multiple rebuilds:
 - `install/post-install.sh:disable_mkinitcpio_hooks()` - disables before package installs
 - `install/post-install.sh:enable_mkinitcpio_hooks()` - re-enables at the end
 - Single `mkinitcpio -P` at the end
+
+### Clipboard Manager Setup
+
+The Windows 11-style clipboard manager (win11-clipboard-history-bin) requires access to `/dev/uinput` for paste simulation:
+
+**Requirements:**
+- User in `input` group (configured in archinstall user creation)
+- `uinput` kernel module loaded at boot via `/etc/modules-load.d/uinput.conf` (configured in post-install)
+
+This allows the clipboard manager to simulate keyboard input for paste operations without requiring root access.
 
 ### Wintarch Locations
 
