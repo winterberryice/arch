@@ -1,11 +1,11 @@
 #!/bin/bash
 # Migration: Add swap support (zram + swapfile)
-# Adds hibernation-ready swap configuration to existing systems
+# Adds two-tier swap configuration to existing systems
 
 set -e
 
 echo "=== Swap Setup Migration ==="
-echo "Adding hibernation-ready swap configuration..."
+echo "Adding two-tier swap configuration (zram + swapfile)..."
 echo ""
 
 # 1. Check if swap already configured
@@ -120,7 +120,7 @@ if [[ "$SWAPFILE_EXISTS" == "false" ]]; then
     fi
 
     # Create swapfile
-    echo "  Creating ${RAM_GB}GB swapfile (hibernation-ready)..."
+    echo "  Creating ${RAM_GB}GB swapfile..."
     touch /swap/swapfile
     chattr +C /swap/swapfile
     dd if=/dev/zero of=/swap/swapfile bs=1M count="$RAM_MB" status=progress
@@ -189,12 +189,5 @@ echo "✓ Migration complete!"
 echo ""
 echo "Swap details:"
 echo "  Zram: $(( RAM_GB / 2 ))GB compressed (priority 100 - fast swap)"
-echo "  Swapfile: ${RAM_GB}GB (priority 1 - hibernation-ready)"
-echo ""
-echo "To enable hibernation in the future:"
-echo "  1. Calculate swapfile offset: sudo btrfs inspect-internal map-swapfile -r /swap/swapfile"
-echo "  2. Add 'resume' hook to /etc/mkinitcpio.conf.d/arch-cosmic.conf after 'encrypt'"
-echo "  3. Add kernel params: resume=/dev/mapper/cryptroot resume_offset=XXXXX"
-echo "  4. Rebuild initramfs: sudo mkinitcpio -P"
-echo "  5. Update Limine: sudo limine-snapper-sync"
+echo "  Swapfile: ${RAM_GB}GB (priority 1 - fallback swap)"
 echo ""

@@ -143,35 +143,27 @@ This allows the clipboard manager to simulate keyboard input for paste operation
 
 ### Swap Configuration
 
-Wintarch configures a two-tier swap system optimized for both performance and hibernation readiness:
+Wintarch configures a two-tier swap system for optimal performance:
 
 **Architecture:**
-- **Zram** (50% of RAM, priority 100) - Compressed swap in RAM, used first for fast swapping
-- **Swapfile** (100% of RAM, priority 1) - Disk-based swap, hibernation-ready, used as fallback
+- **Zram** (50% of RAM, priority 100) - Compressed swap in RAM, used first
+- **Swapfile** (100% of RAM, priority 1) - Disk-based swap, used as fallback
 
 **Why Two-Tier:**
 - Zram provides fast, compressed swap for everyday use (browser tabs, inactive apps)
-- Swapfile ensures hibernation support and catches overflow when zram fills
+- Swapfile catches overflow when zram fills
 - Priority system ensures zram is always used first
 
 **BTRFS Subvolume:**
-- Swap stored in dedicated `@swap` subvolume
-- Not snapshotted (swap doesn't need to be in snapshots)
+- Swap stored in dedicated `@swap` subvolume (not snapshotted)
 - NOCOW attribute set on swapfile (required for BTRFS swapfiles)
-
-**Hibernation Readiness:**
-- Swapfile sized = RAM size (required for hibernation)
-- Resume not enabled by default (requires additional configuration)
-- To enable hibernation:
-  1. Calculate offset: `btrfs inspect-internal map-swapfile -r /swap/swapfile`
-  2. Add `resume` hook after `encrypt` in mkinitcpio
-  3. Add kernel params: `resume=/dev/mapper/cryptroot resume_offset=XXXXX`
-  4. Rebuild initramfs and update Limine
 
 **Implementation:**
 - Fresh installs: `install/partitioning.sh` creates @swap, `install/post-install.sh` configures swap
 - Existing systems: `migrations/1737201600.sh` adds swap with free space check (RAM + 2GB buffer)
 - Migration aborts if insufficient disk space to avoid system issues
+
+**Note:** Swapfile is sized equal to RAM which could support hibernation in the future, but hibernation configuration is currently out of scope.
 
 ### Wintarch Locations
 

@@ -11,15 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
--   **Swap Support:** Two-tier swap configuration for optimal performance and hibernation readiness.
+-   **Swap Support:** Two-tier swap configuration for optimal performance.
     -   **Zram:** 50% of RAM size, compressed with zstd, priority 100 (used first for fast swapping)
-    -   **Swapfile:** RAM size, priority 1 (hibernation-ready, used as fallback)
+    -   **Swapfile:** RAM size, priority 1 (used as fallback when zram fills)
     -   Dedicated `@swap` BTRFS subvolume with NOCOW attribute
     -   Automatic RAM detection and appropriate swap sizing
     -   Free space check (RAM + 2GB buffer) before migration to prevent disk space issues
     -   Fresh installations include swap configuration automatically
     -   Migration (1737201600) adds swap to existing systems
-    -   Hibernation not enabled by default (requires manual configuration - see CLAUDE.md)
 
 ### Changed
 

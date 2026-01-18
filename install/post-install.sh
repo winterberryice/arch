@@ -293,7 +293,7 @@ swap-priority = 100
 EOF" 2>&1 | tee -a "$LOG_FILE" >&2
 
     # Create swapfile (RAM size, priority 1)
-    echo "Creating ${ram_gb}GB swapfile (hibernation-ready)..." >&2
+    echo "Creating ${ram_gb}GB swapfile..." >&2
     chroot_run "
         # Create swapfile and set NOCOW attribute
         touch /swap/swapfile
@@ -309,7 +309,7 @@ EOF" 2>&1 | tee -a "$LOG_FILE" >&2
 
     log_success "Swap configured: ${ram_gb}GB swapfile + zram"
     echo "  Zram: $(( ram_gb / 2 ))GB compressed (priority 100 - fast swap)" >&2
-    echo "  Swapfile: ${ram_gb}GB (priority 1 - hibernation-ready)" >&2
+    echo "  Swapfile: ${ram_gb}GB (priority 1 - fallback)" >&2
 }
 
 # --- REBUILD AND UPDATE ---
