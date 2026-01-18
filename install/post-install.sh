@@ -303,6 +303,10 @@ EOF" 2>&1 | tee -a "$LOG_FILE" >&2
         mkswap /swap/swapfile
     " 2>&1 | tee -a "$LOG_FILE" >&2
 
+    # Add @swap subvolume to fstab (ensures it mounts on boot)
+    echo "Adding @swap subvolume to fstab..." >&2
+    echo "/dev/mapper/cryptroot /swap btrfs subvol=@swap,compress=zstd,noatime 0 0" >> "$MOUNT_POINT/etc/fstab"
+
     # Add swapfile to fstab (priority 1 - lower than zram)
     echo "Adding swapfile to fstab..." >&2
     echo "/swap/swapfile none swap defaults,pri=1 0 0" >> "$MOUNT_POINT/etc/fstab"
