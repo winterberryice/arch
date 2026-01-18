@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-01-18
+
+### Added
+
+-   **Swap Support:** Two-tier swap configuration for optimal performance and hibernation readiness.
+    -   **Zram:** 50% of RAM size, compressed with zstd, priority 100 (used first for fast swapping)
+    -   **Swapfile:** RAM size, priority 1 (hibernation-ready, used as fallback)
+    -   Dedicated `@swap` BTRFS subvolume with NOCOW attribute
+    -   Automatic RAM detection and appropriate swap sizing
+    -   Free space check (RAM + 2GB buffer) before migration to prevent disk space issues
+    -   Fresh installations include swap configuration automatically
+    -   Migration (1737201600) adds swap to existing systems
+    -   Hibernation not enabled by default (requires manual configuration)
+    -   See README.md "Swap Configuration" section for hibernation setup guide
+
+### Changed
+
+-   **BTRFS Subvolumes:** Added `@swap` subvolume to standard installation layout
+-   **Package Updates:** Added `zram-generator` to post-install packages
+
 ## [0.3.2] - 2026-01-17
 
 ### Fixed

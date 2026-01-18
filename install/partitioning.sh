@@ -93,6 +93,7 @@ create_btrfs_filesystem() {
     btrfs subvolume create /mnt/@home >> "$LOG_FILE" 2>&1
     btrfs subvolume create /mnt/@log >> "$LOG_FILE" 2>&1
     btrfs subvolume create /mnt/@pkg >> "$LOG_FILE" 2>&1
+    btrfs subvolume create /mnt/@swap >> "$LOG_FILE" 2>&1
 
     umount /mnt
 
@@ -123,6 +124,9 @@ mount_filesystems() {
 
     mkdir -p "$mount_point/var/cache/pacman/pkg"
     mount -o "subvol=@pkg,$btrfs_opts" "$btrfs_device" "$mount_point/var/cache/pacman/pkg"
+
+    mkdir -p "$mount_point/swap"
+    mount -o "subvol=@swap,$btrfs_opts" "$btrfs_device" "$mount_point/swap"
 
     # Mount EFI partition
     mkdir -p "$mount_point/boot"

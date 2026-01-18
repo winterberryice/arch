@@ -36,6 +36,7 @@ When adding features or documentation, remember this distinction:
 │  2. PARTITIONING                                                │
 │     - Detect/reuse existing EFI partition                       │
 │     - Create LUKS container, BTRFS with subvolumes              │
+│     - Subvolumes: @, @home, @log, @pkg, @swap                   │
 │     - Mount to /mnt/archinstall                                 │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
@@ -51,6 +52,7 @@ When adding features or documentation, remember this distinction:
 │     - Limine bootloader configuration                           │
 │     - Snapper, AUR packages (brave, vscode, clipboard-manager)  │
 │     - Clipboard manager setup (uinput, input group)             │
+│     - Swap setup (zram + RAM-sized swapfile)                    │
 │     - Wintarch setup (/opt/wintarch/, symlinks, state)          │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -101,6 +103,9 @@ Base packages via archinstall JSON:
 - xdg-desktop-portal-cosmic, power-profiles-daemon
 - firefox, zsh, bluez, bluez-utils
 
+Post-install packages (install/post-install.sh):
+- zram-generator (official repos)
+
 AUR packages via yay (install/post-install.sh):
 - limine-snapper-sync, limine-mkinitcpio-hook
 - brave-bin, visual-studio-code-bin, win11-clipboard-history-bin
@@ -135,6 +140,38 @@ The Windows 11-style clipboard manager (win11-clipboard-history-bin) requires ac
 - `uinput` kernel module loaded at boot via `/etc/modules-load.d/uinput.conf` (configured in post-install)
 
 This allows the clipboard manager to simulate keyboard input for paste operations without requiring root access.
+
+### Swap Configuration
+
+Wintarch configures a two-tier swap system optimized for both performance and hibernation readiness:
+
+**Architecture:**
+- **Zram** (50% of RAM, priority 100) - Compressed swap in RAM, used first for fast swapping
+- **Swapfile** (100% of RAM, priority 1) - Disk-based swap, hibernation-ready, used as fallback
+
+**Why Two-Tier:**
+- Zram provides fast, compressed swap for everyday use (browser tabs, inactive apps)
+- Swapfile ensures hibernation support and catches overflow when zram fills
+- Priority system ensures zram is always used first
+
+**BTRFS Subvolume:**
+- Swap stored in dedicated `@swap` subvolume
+- Not snapshotted (swap doesn't need to be in snapshots)
+- NOCOW attribute set on swapfile (required for BTRFS swapfiles)
+
+**Hibernation Readiness:**
+- Swapfile sized = RAM size (required for hibernation)
+- Resume not enabled by default (requires additional configuration)
+- To enable hibernation:
+  1. Calculate offset: `btrfs inspect-internal map-swapfile -r /swap/swapfile`
+  2. Add `resume` hook after `encrypt` in mkinitcpio
+  3. Add kernel params: `resume=/dev/mapper/cryptroot resume_offset=XXXXX`
+  4. Rebuild initramfs and update Limine
+
+**Implementation:**
+- Fresh installs: `install/partitioning.sh` creates @swap, `install/post-install.sh` configures swap
+- Existing systems: `migrations/1737201600.sh` adds swap with free space check (RAM + 2GB buffer)
+- Migration aborts if insufficient disk space to avoid system issues
 
 ### Wintarch Locations
 
