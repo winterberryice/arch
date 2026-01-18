@@ -139,7 +139,7 @@ if [[ "$SWAPFILE_EXISTS" == "false" ]]; then
 
     # Enable swapfile
     echo "  Enabling swapfile..."
-    swapon /swap/swapfile
+    swapon --priority 1 /swap/swapfile
     echo "  ✓ Swapfile enabled"
 
     echo "✓ Swapfile setup complete"
