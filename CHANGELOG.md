@@ -19,8 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     -   Free space check (RAM + 2GB buffer) before migration to prevent disk space issues
     -   Fresh installations include swap configuration automatically
     -   Migration (1737201600) adds swap to existing systems
-    -   Hibernation not enabled by default (requires manual configuration)
-    -   See README.md "Swap Configuration" section for hibernation setup guide
+    -   Hibernation not enabled by default (requires manual configuration - see CLAUDE.md)
 
 ### Changed
 

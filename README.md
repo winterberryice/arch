@@ -134,64 +134,14 @@ If something breaks:
 
 Up to 5 snapshots appear in the boot menu via limine-snapper-sync.
 
-## Swap Configuration
+## Swap
 
-Wintarch uses a two-tier swap system for optimal performance:
+Wintarch automatically configures smart swap for optimal performance:
 
-### What's Configured
+- **Zram** (50% of RAM) - Fast compressed swap in RAM
+- **Swapfile** (same size as RAM) - Disk-based swap for overflow
 
-- **Zram** (50% of RAM, compressed) - Fast swap in RAM, used first
-- **Swapfile** (same size as RAM) - Disk-based swap, used as fallback
-
-### How It Works
-
-The system prioritizes zram for fast swapping of inactive apps and browser tabs. When zram fills up, it overflows to the disk-based swapfile. This gives you the best of both worlds: speed and capacity.
-
-### Checking Swap Status
-
-```bash
-swapon --show
-# NAME           TYPE SIZE  USED PRIO
-# /dev/zram0     zram  8G    2G  100   <- Used first (fast)
-# /swap/swapfile file 16G   500M   1   <- Fallback
-```
-
-### Enabling Hibernation (Optional)
-
-The swapfile is sized to support hibernation but it's not enabled by default. To enable:
-
-1. Calculate the swapfile offset:
-   ```bash
-   sudo btrfs inspect-internal map-swapfile -r /swap/swapfile
-   # Output: 123456 (save this number)
-   ```
-
-2. Add resume hook to mkinitcpio (after `encrypt`):
-   ```bash
-   sudo vim /etc/mkinitcpio.conf.d/arch-cosmic.conf
-   # Change: HOOKS=(... block encrypt filesystems ...)
-   # To:     HOOKS=(... block encrypt resume filesystems ...)
-   ```
-
-3. Update kernel parameters in Limine:
-   ```bash
-   sudo vim /etc/default/limine
-   # Add to KERNEL_CMDLINE[default]:
-   # resume=/dev/mapper/cryptroot resume_offset=123456
-   ```
-
-4. Rebuild initramfs and update bootloader:
-   ```bash
-   sudo mkinitcpio -P
-   sudo limine-snapper-sync
-   ```
-
-5. Test hibernation:
-   ```bash
-   systemctl hibernate
-   ```
-
-**Note:** If you upgrade your RAM in the future, you'll need to recreate the swapfile and recalculate the offset.
+The system uses zram first for speed, then falls back to the swapfile when needed. Sleep works out of the box. Hibernation is supported but not enabled by default (requires additional configuration - see CLAUDE.md for technical details).
 
 ## Differences from Omarchy
 
