@@ -266,6 +266,56 @@ EOF" 2>&1 | tee -a "$LOG_FILE" >&2
     log_success "Clipboard manager configured"
 }
 
+# --- SWAP CONFIGURATION ---
+
+setup_swap() {
+    log_info "Setting up swap (zram + swapfile)..."
+    echo >&2
+
+    # Detect RAM size
+    local ram_mb
+    ram_mb=$(free -m | awk '/^Mem:/{print $2}')
+    local ram_gb=$((ram_mb / 1024))
+
+    echo "Detected ${ram_gb}GB RAM" >&2
+
+    # Install zram-generator
+    echo "Installing zram-generator..." >&2
+    chroot_run "pacman -S --noconfirm --needed zram-generator" 2>&1 | tee -a "$LOG_FILE" >&2
+
+    # Configure zram (50% of RAM, priority 100)
+    echo "Configuring zram (50% of RAM)..." >&2
+    chroot_run "cat > /etc/systemd/zram-generator.conf << 'EOF'
+[zram0]
+zram-size = ram / 2
+compression-algorithm = zstd
+swap-priority = 100
+EOF" 2>&1 | tee -a "$LOG_FILE" >&2
+
+    # Create swapfile (RAM size, priority 1)
+    echo "Creating ${ram_gb}GB swapfile..." >&2
+    chroot_run "
+        # Create swapfile and set NOCOW attribute
+        touch /swap/swapfile
+        chattr +C /swap/swapfile
+        dd if=/dev/zero of=/swap/swapfile bs=1M count=${ram_mb} status=progress
+        chmod 600 /swap/swapfile
+        mkswap /swap/swapfile
+    " 2>&1 | tee -a "$LOG_FILE" >&2
+
+    # Add @swap subvolume to fstab (ensures it mounts on boot)
+    echo "Adding @swap subvolume to fstab..." >&2
+    echo "/dev/mapper/cryptroot /swap btrfs subvol=@swap,compress=zstd,noatime 0 0" >> "$MOUNT_POINT/etc/fstab"
+
+    # Add swapfile to fstab (priority 1 - lower than zram)
+    echo "Adding swapfile to fstab..." >&2
+    echo "/swap/swapfile none swap defaults,pri=1 0 0" >> "$MOUNT_POINT/etc/fstab"
+
+    log_success "Swap configured: ${ram_gb}GB swapfile + zram"
+    echo "  Zram: $(( ram_gb / 2 ))GB compressed (priority 100 - fast swap)" >&2
+    echo "  Swapfile: ${ram_gb}GB (priority 1 - fallback)" >&2
+}
+
 # --- REBUILD AND UPDATE ---
 
 rebuild_initramfs() {
@@ -455,6 +505,9 @@ run_post_install() {
 
     # Configure clipboard manager requirements (uinput, input group)
     configure_clipboard_manager
+
+    # Setup swap (zram + swapfile)
+    setup_swap
 
     # Update Limine (this will trigger mkinitcpio automatically via hooks)
     update_limine

@@ -10,6 +10,7 @@ Inspired by [Omarchy](https://github.com/basecamp/omarchy), but with COSMIC inst
 - **BTRFS with Snapshots** - Automatic snapshots before updates, bootable rollback via Limine
 - **LUKS Encryption** - Full disk encryption (mandatory)
 - **Dual-Boot Friendly** - Preserve Windows, use free space, or existing partitions
+- **Smart Swap** - Two-tier swap (zram + swapfile) for optimal performance
 - **Simple Updates** - One command (`wintarch-update`) handles everything safely
 - **Pre-configured** - Ready to use out of the box
 
@@ -79,6 +80,7 @@ The TUI installer will guide you through:
 | @home | /home | User data |
 | @log | /var/log | System logs |
 | @pkg | /var/cache/pacman/pkg | Package cache |
+| @swap | /swap | Swap storage |
 
 ## System Management
 
@@ -131,6 +133,15 @@ If something breaks:
 4. Reboot
 
 Up to 5 snapshots appear in the boot menu via limine-snapper-sync.
+
+## Swap
+
+Wintarch automatically configures smart swap for optimal performance:
+
+- **Zram** (50% of RAM) - Fast compressed swap in RAM
+- **Swapfile** (same size as RAM) - Disk-based swap for overflow
+
+The system uses zram first for speed, then falls back to the swapfile when needed.
 
 ## Differences from Omarchy
 
