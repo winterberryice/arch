@@ -183,6 +183,22 @@ install_aur_helper() {
     return 0
 }
 
+configure_yay() {
+    log_info "Configuring yay (enabling colors)..."
+    echo >&2
+
+    chroot_run "
+        mkdir -p /etc/yay
+        cat > /etc/yay/config.json << 'EOF'
+{
+  \"usecolor\": true
+}
+EOF
+    " 2>&1 | tee -a "$LOG_FILE" >&2
+
+    log_success "yay configured with color support"
+}
+
 install_limine_snapper_packages() {
     log_info "Installing Limine-Snapper integration packages from AUR..."
     echo >&2
@@ -196,6 +212,7 @@ install_limine_snapper_packages() {
             log_warn "Skipping Limine-Snapper AUR packages"
             return 1
         fi
+        configure_yay
 
         chroot_run "
             echo '$USERNAME ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/temp-build
@@ -233,6 +250,7 @@ install_aur_packages() {
             log_warn "yay not available - skipping AUR packages"
             return 1
         fi
+        configure_yay
     fi
 
     chroot_run "
