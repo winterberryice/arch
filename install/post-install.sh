@@ -188,12 +188,8 @@ configure_yay() {
     echo >&2
 
     chroot_run "
-        mkdir -p /etc/yay
-        cat > /etc/yay/config.json << 'EOF'
-{
-  \"usecolor\": true
-}
-EOF
+        # Uncomment Color in pacman.conf to enable colors for pacman and yay
+        sed -i 's/^#Color/Color/' /etc/pacman.conf
     " 2>&1 | tee -a "$LOG_FILE" >&2
 
     log_success "yay configured with color support"

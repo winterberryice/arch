@@ -1,54 +1,41 @@
 #!/bin/bash
 # Migration: Add yay color support
-# Enables color output for yay AUR helper
+# Enables color output for pacman and yay by uncommenting Color in pacman.conf
 
 set -e
 
-echo "=== Yay Color Configuration Migration ==="
-echo "Enabling color support for yay..."
+echo "=== Yay/Pacman Color Configuration Migration ==="
+echo "Enabling color support for pacman and yay..."
 echo ""
 
-# 1. Check if yay is installed
-if ! command -v yay &>/dev/null; then
-    echo "⚠ yay is not installed, skipping color configuration"
-    echo "  (Color will be configured automatically if yay is installed later)"
+# 1. Check if Color is already enabled in pacman.conf
+if grep -q '^Color' /etc/pacman.conf; then
+    echo "✓ Color already enabled in pacman.conf, nothing to do"
     exit 0
 fi
 
-echo "✓ yay is installed"
-echo ""
-
-# 2. Check if color config already exists
-if [[ -f /etc/yay/config.json ]]; then
-    if grep -q '"usecolor".*true' /etc/yay/config.json; then
-        echo "✓ yay color support already enabled, nothing to do"
-        exit 0
-    else
-        echo "⚠ yay config exists but color is not enabled"
-        echo "  Updating configuration..."
-    fi
+# 2. Check if Color option exists (commented or not)
+if ! grep -q '#Color' /etc/pacman.conf && ! grep -q 'Color' /etc/pacman.conf; then
+    echo "⚠ Warning: Color option not found in /etc/pacman.conf"
+    echo "  Adding Color option to /etc/pacman.conf..."
+    # Add Color after the [options] section
+    sed -i '/^\[options\]/a Color' /etc/pacman.conf
+else
+    # 3. Uncomment the Color line
+    echo "Uncommenting Color in /etc/pacman.conf..."
+    sed -i 's/^#Color/Color/' /etc/pacman.conf
 fi
 
-# 3. Create yay configuration directory
-echo "Creating yay configuration..."
-mkdir -p /etc/yay
-
-# 4. Create or update yay config with color support
-cat > /etc/yay/config.json <<'EOF'
-{
-  "usecolor": true
-}
-EOF
-
-echo "✓ yay configuration created"
+echo "✓ Color enabled in pacman.conf"
 echo ""
 
-# 5. Verify configuration
+# 4. Verify configuration
 echo "=== Configuration Summary ==="
-echo "File: /etc/yay/config.json"
-cat /etc/yay/config.json
+echo "File: /etc/pacman.conf"
+echo "Color setting:"
+grep '^Color' /etc/pacman.conf
 echo ""
 echo "✓ Migration complete!"
 echo ""
-echo "Yay will now display colored output in the terminal."
+echo "Both pacman and yay will now display colored output in the terminal."
 echo ""
