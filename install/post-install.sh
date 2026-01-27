@@ -183,8 +183,8 @@ install_aur_helper() {
     return 0
 }
 
-configure_yay() {
-    log_info "Configuring yay (enabling colors)..."
+enable_pacman_colors() {
+    log_info "Enabling colors for pacman and yay..."
     echo >&2
 
     chroot_run "
@@ -192,7 +192,7 @@ configure_yay() {
         sed -i 's/^#Color/Color/' /etc/pacman.conf
     " 2>&1 | tee -a "$LOG_FILE" >&2
 
-    log_success "yay configured with color support"
+    log_success "Colors enabled for package managers"
 }
 
 install_limine_snapper_packages() {
@@ -208,7 +208,6 @@ install_limine_snapper_packages() {
             log_warn "Skipping Limine-Snapper AUR packages"
             return 1
         fi
-        configure_yay
 
         chroot_run "
             echo '$USERNAME ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/temp-build
@@ -246,7 +245,6 @@ install_aur_packages() {
             log_warn "yay not available - skipping AUR packages"
             return 1
         fi
-        configure_yay
     fi
 
     chroot_run "
@@ -507,6 +505,7 @@ run_post_install() {
     # Configure components
     configure_mkinitcpio
     configure_limine
+    enable_pacman_colors
 
     # Install first-boot service (configures snapper on first boot when D-Bus is available)
     install_first_boot_service
