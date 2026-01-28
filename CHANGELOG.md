@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+-   **Color Support for Package Managers:** Enabled colored output for pacman and yay system-wide.
+    -   Automatically uncomments `Color` option in `/etc/pacman.conf` during installation
+    -   Works for both pacman (official repos) and yay (AUR packages)
+    -   Fresh installations include color support by default
+    -   Migration (1769463342) enables colors on existing systems
+
 ## [0.4.0] - 2026-01-18
 
 ### Added
