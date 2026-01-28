@@ -431,54 +431,60 @@ wintarch-migrations --status
 
 ## Release Process
 
-This project uses a semi-automated release process managed by a GitHub Action. The version is set manually in the `version` file, then a maintainer triggers the release by commenting on an approved pull request.
+This project uses a semi-automated release process managed by a GitHub Action. The version is derived from the branch name, then a maintainer triggers the release by commenting on an approved pull request.
 
 ### How to Release
 
 Only users with write access can trigger releases.
 
-**1. Update the version file**
+**1. Create a version branch**
 
-In your PR, update the `version` file with the new version:
+Branch names must follow the `vX.Y.Z` pattern:
 ```bash
 # For bugfixes: v0.1.0 → v0.1.1
-echo "v0.1.1" > version
+git checkout -b v0.1.1
 
 # For new features: v0.1.1 → v0.2.0
-echo "v0.2.0" > version
+git checkout -b v0.2.0
 
 # For breaking changes: v0.2.0 → v1.0.0
-echo "v1.0.0" > version
+git checkout -b v1.0.0
 ```
 
-Commit this change as part of your PR.
+The version file will be updated automatically from the branch name during release.
 
-**2. Get PR approved**
+**2. Make changes and open PR**
+
+Commit your changes and open a pull request.
+
+**3. Get PR approved**
 
 Ensure the PR is reviewed and approved.
 
-**3. Comment on the PR**
+**4. Comment on the PR**
 
 Post a `/release` comment on the approved PR. Optionally specify merge strategy:
-- `/release` - Default (squash merge)
+- `/release` - Default (rebase and fast-forward)
+- `/release --squash` - Squash merge
 - `/release --merge-commit` - Create merge commit
-- `/release --rebase` - Rebase and fast-forward
 
-**4. Automation runs**
+**5. Automation runs**
 
 The GitHub Action will:
-1. Merge the PR using your chosen strategy
-2. Read version from the `version` file
-3. Create commit: `chore(release): v0.2.0`
-4. Tag the commit with the version
-5. Publish GitHub Release with auto-generated notes
-6. Close PR with link to release
+1. Validate branch name matches `vX.Y.Z` pattern
+2. Extract version from branch name
+3. Merge the PR using your chosen strategy (rebase by default)
+4. Update `version` file with the extracted version
+5. Create commit: `chore(release): v0.2.0`
+6. Tag the commit with the version
+7. Publish GitHub Release with auto-generated notes
+8. Close PR with link to release
 
 ### Versioning
 
-- Version stored in `version` file at repo root
-- Follows semantic versioning (MAJOR.MINOR.PATCH)
-- Must be updated manually in PRs before release
+- Version derived from release branch name (e.g., `v0.5.0`)
+- Follows semantic versioning (vMAJOR.MINOR.PATCH)
+- Version file updated automatically during release
 - Displayed to users via `wintarch-version` command
 
 ## Code Style
