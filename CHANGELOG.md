@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     -   Version is automatically derived from branch name (no manual `version` file updates)
     -   Default merge strategy changed from squash to rebase
     -   `/release --squash` and `/release --merge-commit` options still available
+    -   Fixed rebase failures caused by shallow clone (now fetches full git history)
 
 ## [0.4.0] - 2026-01-18
 
