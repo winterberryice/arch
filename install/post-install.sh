@@ -183,6 +183,18 @@ install_aur_helper() {
     return 0
 }
 
+enable_pacman_colors() {
+    log_info "Enabling colors for pacman and yay..."
+    echo >&2
+
+    chroot_run "
+        # Uncomment Color in pacman.conf to enable colors for pacman and yay
+        sed -i 's/^#Color/Color/' /etc/pacman.conf
+    " 2>&1 | tee -a "$LOG_FILE" >&2
+
+    log_success "Colors enabled for package managers"
+}
+
 install_limine_snapper_packages() {
     log_info "Installing Limine-Snapper integration packages from AUR..."
     echo >&2
@@ -493,6 +505,7 @@ run_post_install() {
     # Configure components
     configure_mkinitcpio
     configure_limine
+    enable_pacman_colors
 
     # Install first-boot service (configures snapper on first boot when D-Bus is available)
     install_first_boot_service
